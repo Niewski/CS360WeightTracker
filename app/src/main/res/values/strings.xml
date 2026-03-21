@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">CS360 Weight Tracker</string>
+    <string name="weight_title">Add Weight Entry</string>
+    <string name="weight_history_title">Weight History</string>
+    <string name="sms_title">Enable SMS Notifications</string>
+    <string name="sms_explanation">To notify you when you reach your goal weight, this app can send SMS messages. Please grant permission to enable this feature.</string>
+    <string name="sms_status">Permission status will appear here.</string>
+    <string name="username_hint">Enter Username</string>
+    <string name="password_hint">Enter Password</string>
+    <string name="date_hint">Date</string>
+    <string name="weight_hint">Weight (lbs)</string>
+    <string name="login_button">Log In</string>
+    <string name="create_account_button">Create Account</string>
+    <string name="add_entry_button">Add Entry</string>
+    <string name="sms_permission_button">Grant SMS Permission</string>
+    <string name="delete_button">Delete</string>
+    <string name="save_button">Save</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="date_label">Date</string>
+    <string name="weight_label">Weight</string>
+    <string name="action_label">Action</string>
+    <string name="goal_weight_hint">Goal Weight (lbs)</string>
+    <string name="phone_number_hint">Phone Number (optional)</string>
+</resources>
