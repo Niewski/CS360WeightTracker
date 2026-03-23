@@ -12,9 +12,11 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.UserRepository;
 
 public class CreateAccountActivity extends AppCompatActivity {
 
@@ -22,7 +24,8 @@ public class CreateAccountActivity extends AppCompatActivity {
 
     EditText etUsername, etPassword, etGoalWeight, etPhoneNumber;
     Button btnCreate;
-    DatabaseHelper dbHelper;
+    CreateAccountViewModel viewModel;
+    private String pendingPhoneForPermission = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,39 +39,33 @@ public class CreateAccountActivity extends AppCompatActivity {
         etPhoneNumber = findViewById(R.id.etPhoneNumber);
         btnCreate = findViewById(R.id.btnCreateAccount);
 
-        dbHelper = new DatabaseHelper(this);
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        UserRepository userRepository = new UserRepository(dbHelper);
+
+        viewModel = new ViewModelProvider(this).get(CreateAccountViewModel.class);
+        viewModel.init(userRepository);
+
+        viewModel.getCreateResult().observe(this, created -> {
+            if (created != null && created) {
+                Toast.makeText(this, "Account created.", Toast.LENGTH_SHORT).show();
+                String phone = etPhoneNumber.getText().toString();
+                if (!phone.isEmpty()) {
+                    pendingPhoneForPermission = phone;
+                    requestSmsPermission();
+                } else {
+                    proceedToLogin();
+                }
+            } else if (created != null) {
+                Toast.makeText(this, "Username already exists or invalid input", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         btnCreate.setOnClickListener(v -> {
             String username = etUsername.getText().toString();
             String password = etPassword.getText().toString();
             String goalStr = etGoalWeight.getText().toString();
             String phone = etPhoneNumber.getText().toString();
-
-            if (username.isEmpty() || password.isEmpty() || goalStr.isEmpty()) {
-                Toast.makeText(this, "Username, password, and goal weight are required", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            try {
-                double goalWeight = Double.parseDouble(goalStr);
-                boolean created = dbHelper.createUser(username, password, goalWeight, phone);
-                if (created) {
-                    Toast.makeText(this, "Account created.", Toast.LENGTH_SHORT).show();
-
-                    if (!phone.isEmpty()) {
-                        Toast.makeText(this, "Requesting SMS permission...", Toast.LENGTH_SHORT).show();
-                        requestSmsPermission();
-                    } else {
-                        // Skip SMS setup
-                        proceedToLogin();
-                    }
-                } else {
-                    Toast.makeText(this, "Username already exists", Toast.LENGTH_SHORT).show();
-                }
-            } catch (NumberFormatException e) {
-                Toast.makeText(this, "Invalid goal weight", Toast.LENGTH_SHORT).show();
-            }
-
+            viewModel.createAccount(username, password, goalStr, phone);
         });
     }
 
@@ -94,6 +91,7 @@ public class CreateAccountActivity extends AppCompatActivity {
             }
 
             // In both cases, proceed to login screen
+            pendingPhoneForPermission = null;
             proceedToLogin();
         }
     }

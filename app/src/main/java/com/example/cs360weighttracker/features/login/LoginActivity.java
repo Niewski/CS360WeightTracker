@@ -7,8 +7,10 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.UserRepository;
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.features.weight.WeightHistoryActivity;
 
@@ -16,7 +18,7 @@ public class LoginActivity extends AppCompatActivity {
 
     EditText etUsername, etPassword;
     Button btnLogin, btnCreateAccount;
-    DatabaseHelper dbHelper;
+    LoginViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,20 +31,27 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin = findViewById(R.id.btnLogin);
         btnCreateAccount = findViewById(R.id.btnCreateAccount);
 
-        dbHelper = new DatabaseHelper(this);
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        UserRepository userRepository = new UserRepository(dbHelper);
 
-        btnLogin.setOnClickListener(v -> {
-            String username = etUsername.getText().toString();
-            String password = etPassword.getText().toString();
-            int userId = dbHelper.loginUser(username, password);
-            if (userId != -1) {
+        viewModel = new ViewModelProvider(this).get(LoginViewModel.class);
+        viewModel.init(userRepository);
+
+        viewModel.getLoginResult().observe(this, userId -> {
+            if (userId != null && userId != -1) {
                 Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(LoginActivity.this, WeightHistoryActivity.class);
                 intent.putExtra("userId", userId);
                 startActivity(intent);
-            } else {
+            } else if (userId != null) {
                 Toast.makeText(this, "Invalid login", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        btnLogin.setOnClickListener(v -> {
+            String username = etUsername.getText().toString();
+            String password = etPassword.getText().toString();
+            viewModel.login(username, password);
         });
 
         btnCreateAccount.setOnClickListener(v -> {
