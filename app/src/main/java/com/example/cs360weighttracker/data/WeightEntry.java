@@ -1,4 +1,4 @@
-package com.example.cs360weighttracker.features.weight;
+package com.example.cs360weighttracker.data;
 
 public class WeightEntry {
     public int id;
@@ -11,4 +11,3 @@ public class WeightEntry {
         this.weight = weight;
     }
 }
-

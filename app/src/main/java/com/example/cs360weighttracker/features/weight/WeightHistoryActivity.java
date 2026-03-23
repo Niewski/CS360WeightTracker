@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.WeightEntry;
 import com.example.cs360weighttracker.R;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 

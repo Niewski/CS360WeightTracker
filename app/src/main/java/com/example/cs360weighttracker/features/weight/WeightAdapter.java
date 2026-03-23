@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.WeightEntry;
 
 import java.util.ArrayList;
 import java.util.Locale;
