@@ -17,6 +17,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 
 lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle" }
 lifecycle-livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata", version.ref = "lifecycle" }
+arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version = "2.2.0" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 
 [plugins]
