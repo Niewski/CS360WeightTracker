@@ -14,6 +14,14 @@ import com.example.cs360weighttracker.data.UserRepository;
 
 import java.util.Locale;
 
+/**
+ * Profile screen where the user can view and update their goal weight
+ * and phone number.
+ *
+ * <p>Loads the user's `UserProfile` via {@link ProfileViewModel} and
+ * exposes an update action. The Activity validates presence of
+ * `userId` in the launching Intent.</p>
+ */
 public class ProfileActivity extends AppCompatActivity {
 
     EditText etUsername, etGoalWeight, etPhoneNumber;
@@ -21,6 +29,10 @@ public class ProfileActivity extends AppCompatActivity {
     ProfileViewModel viewModel;
     int userId = -1;
 
+    /**
+     * Initializes UI, creates repository/ViewModel and observes
+     * profile/update LiveData.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
