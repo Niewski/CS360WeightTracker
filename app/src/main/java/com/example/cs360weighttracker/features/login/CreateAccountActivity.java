@@ -18,6 +18,13 @@ import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
 import com.example.cs360weighttracker.data.UserRepository;
 
+/**
+ * Account creation screen.
+ *
+ * <p>Allows creating a new user with an optional phone number. If a
+ * phone number is provided, the Activity requests `SEND_SMS` permission
+ * so the app can later send a goal-reached SMS.</p>
+ */
 public class CreateAccountActivity extends AppCompatActivity {
 
     private static final int SMS_PERMISSION_CODE = 123;
@@ -27,6 +34,10 @@ public class CreateAccountActivity extends AppCompatActivity {
     CreateAccountViewModel viewModel;
     private String pendingPhoneForPermission = null;
 
+    /**
+     * Inflates the layout, initializes the ViewModel, and observes the
+     * account-creation result to prompt for SMS permission or navigate.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,6 +80,10 @@ public class CreateAccountActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Requests `SEND_SMS` permission if not already granted; otherwise
+     * proceeds to the login screen.
+     */
     private void requestSmsPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -80,6 +95,10 @@ public class CreateAccountActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Handles the SMS permission result and always navigates to the
+     * login screen afterwards.
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -96,6 +115,9 @@ public class CreateAccountActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Navigates to the login screen and finishes this Activity.
+     */
     private void proceedToLogin() {
         Intent intent = new Intent(this, LoginActivity.class);
         startActivity(intent);

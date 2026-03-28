@@ -14,12 +14,30 @@ import com.example.cs360weighttracker.data.UserRepository;
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.features.weight.WeightHistoryActivity;
 
+/**
+ * Entry point of the application — the login screen.
+ *
+ * <p>Displays username and password fields with two actions:</p>
+ * <ul>
+ *   <li><b>Log In</b> — authenticates via {@link LoginViewModel} and
+ *       navigates to {@link WeightHistoryActivity} on success.</li>
+ *   <li><b>Create Account</b> — launches {@link CreateAccountActivity}.</li>
+ * </ul>
+ *
+ * <p>Registered as the {@code MAIN/LAUNCHER} activity in the manifest.</p>
+ *
+ * @see LoginViewModel
+ */
 public class LoginActivity extends AppCompatActivity {
 
     EditText etUsername, etPassword;
     Button btnLogin, btnCreateAccount;
     LoginViewModel viewModel;
 
+    /**
+     * Inflates the login layout, wires up the ViewModel, and observes
+     * the login result LiveData to navigate or show errors.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
