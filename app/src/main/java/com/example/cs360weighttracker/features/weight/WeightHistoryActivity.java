@@ -19,6 +19,16 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Main screen of the application — displays the logged-in user's weight
+ * history as a scrollable list.
+ *
+ * <p>Hosts a {@link RecyclerView} backed by {@link WeightAdapter} and
+ * exposes actions to add, edit, or delete entries. The Activity
+ * observes {@link WeightHistoryViewModel#getWeights()} and refreshes
+ * the list on changes. The {@code userId} must be provided via the
+ * launching Intent.</p>
+ */
 public class WeightHistoryActivity extends AppCompatActivity {
 
     private WeightAdapter adapter;
@@ -26,6 +36,10 @@ public class WeightHistoryActivity extends AppCompatActivity {
     private final ArrayList<WeightEntry> weightList = new ArrayList<>();
     private WeightHistoryViewModel viewModel;
 
+    /**
+     * Wires UI, creates the repository + ViewModel, and observes the
+     * ViewModel's LiveData to render weight entries.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -87,6 +101,10 @@ public class WeightHistoryActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Ensures the latest weights are loaded when returning to this
+     * Activity (e.g., after Add/Edit operations).
+     */
     @Override
     protected void onResume() {
         super.onResume();
