@@ -16,6 +16,13 @@ import com.example.cs360weighttracker.data.WeightRepository;
 import java.util.Calendar;
 import java.util.Locale;
 
+/**
+ * Screen for editing an existing weight entry.
+ *
+ * <p>Pre-populates fields from Intent extras, allows the user to
+ * adjust date and weight, and updates the database via
+ * {@link EditWeightViewModel}.</p>
+ */
 public class EditWeightActivity extends AppCompatActivity {
 
     EditText etDate, etWeight;
@@ -24,6 +31,10 @@ public class EditWeightActivity extends AppCompatActivity {
     int userId = -1;
     int weightId = -1;
 
+    /**
+     * Initializes UI, sets up the ViewModel, and observes the update
+     * result to finish the Activity on success.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

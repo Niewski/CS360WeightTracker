@@ -15,6 +15,10 @@ import com.example.cs360weighttracker.data.WeightEntry;
 import java.util.ArrayList;
 import java.util.Locale;
 
+/**
+ * RecyclerView adapter that binds {@link WeightEntry} data to
+ * item views and exposes edit/delete callbacks.
+ */
 public class WeightAdapter extends RecyclerView.Adapter<WeightAdapter.WeightViewHolder> {
 
     public interface OnDeleteListener {
@@ -29,6 +33,11 @@ public class WeightAdapter extends RecyclerView.Adapter<WeightAdapter.WeightView
     private final OnDeleteListener deleteListener;
     private final OnEditListener editListener;
 
+    /**
+     * @param entries       mutable list that the Activity updates
+     * @param deleteListener callback invoked when delete is tapped
+     * @param editListener   callback invoked when an item is tapped
+     */
     public WeightAdapter(ArrayList<WeightEntry> entries, OnDeleteListener deleteListener, OnEditListener editListener) {
         this.entries = entries;
         this.deleteListener = deleteListener;
