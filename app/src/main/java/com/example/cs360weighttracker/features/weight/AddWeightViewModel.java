@@ -7,6 +7,15 @@ import androidx.lifecycle.ViewModel;
 import com.example.cs360weighttracker.data.UserRepository;
 import com.example.cs360weighttracker.data.WeightRepository;
 
+/**
+ * ViewModel for the "add weight" screen.
+ *
+ * <p>Handles validation and insertion of a new weight entry via
+ * {@link WeightRepository}. After a successful insert it checks the
+ * user's goal via {@link UserRepository} and emits a
+ * {@link GoalReachedEvent} if the goal was reached and the SMS has
+ * not yet been sent.</p>
+ */
 public class AddWeightViewModel extends ViewModel {
 
     private WeightRepository weightRepository;
@@ -15,9 +24,12 @@ public class AddWeightViewModel extends ViewModel {
 
     // Save result: null = not yet attempted, true = success, false = failure
     private final MutableLiveData<Boolean> saveResult = new MutableLiveData<>();
-    // Goal reached event: emits true when weight <= goal and SMS hasn't been sent yet
+    // Goal reached event: emits when weight <= goal and SMS hasn't been sent yet
     private final MutableLiveData<GoalReachedEvent> goalReachedEvent = new MutableLiveData<>();
 
+    /**
+     * One-time initializer — supplies repositories and userId.
+     */
     public void init(WeightRepository weightRepository, UserRepository userRepository, int userId) {
         if (this.weightRepository != null) return; // Already initialized
         this.weightRepository = weightRepository;
@@ -25,14 +37,25 @@ public class AddWeightViewModel extends ViewModel {
         this.userId = userId;
     }
 
+    /**
+     * Observable result of the save operation.
+     */
     public LiveData<Boolean> getSaveResult() {
         return saveResult;
     }
 
+    /**
+     * Observable event emitted when the goal is reached and an SMS may
+     * need to be sent.
+     */
     public LiveData<GoalReachedEvent> getGoalReachedEvent() {
         return goalReachedEvent;
     }
 
+    /**
+     * Validates input, inserts the weight row, and emits events as
+     * appropriate.
+     */
     public void saveWeight(String date, String weightStr) {
         if (date.isEmpty() || weightStr.isEmpty()) {
             saveResult.setValue(false);
@@ -69,7 +92,9 @@ public class AddWeightViewModel extends ViewModel {
     }
 
     /**
-     * Event data for goal-reached SMS trigger.
+     * Event data for goal-reached SMS trigger. Contains the phone
+     * number and a handled flag to prevent re-delivery on
+     * configuration changes.
      */
     public static class GoalReachedEvent {
         public final String phoneNumber;

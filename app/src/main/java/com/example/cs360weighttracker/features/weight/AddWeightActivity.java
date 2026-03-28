@@ -23,6 +23,15 @@ import com.example.cs360weighttracker.R;
 import java.util.Calendar;
 import java.util.Locale;
 
+/**
+ * Screen for adding a new daily weight entry.
+ *
+ * <p>Defaults the date to today, validates input, and delegates
+ * insertion to {@link AddWeightViewModel}. When a saved weight meets
+ * or beats the user's goal and an SMS has not yet been sent, the
+ * Activity requests SMS permission (if needed) and sends a one-time
+ * notification.</p>
+ */
 public class AddWeightActivity extends AppCompatActivity {
 
     private static final int SMS_PERMISSION_CODE = 2001;
@@ -33,6 +42,10 @@ public class AddWeightActivity extends AppCompatActivity {
     int userId = -1;  // default/fallback
     private String pendingPhone = null;
 
+    /**
+     * Wires UI controls, initializes repositories + ViewModel, and
+     * observes ViewModel LiveData for save results and goal events.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -108,6 +121,12 @@ public class AddWeightActivity extends AppCompatActivity {
         btnCancel.setOnClickListener(v -> finish());
     }
 
+    /**
+     * Sends the goal-reached SMS using system SmsManager.
+     *
+     * @param phoneNumber destination phone number
+     * @return {@code true} on success
+     */
     private boolean sendGoalReachedSms(String phoneNumber) {
         try {
             String message = "🎉 You've reached your goal weight!";
@@ -121,6 +140,10 @@ public class AddWeightActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Handles runtime permission result for `SEND_SMS` and attempts
+     * to send the pending SMS if permission was granted.
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
