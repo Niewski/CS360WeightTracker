@@ -61,6 +61,12 @@ public class AddWeightActivityTest {
         db.delete("users", "id=?", new String[]{String.valueOf(testUserId)});
     }
 
+    private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {
+        // Allow finish() to propagate through the lifecycle
+        Thread.sleep(1000);
+        assertEquals(Lifecycle.State.DESTROYED, scenario.getState());
+    }
+
     private Intent createIntent(int userId) {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         Intent intent = new Intent(context, AddWeightActivity.class);
@@ -96,14 +102,14 @@ public class AddWeightActivityTest {
     }
 
     @Test
-    public void btnSave_validInput_finishesActivity() {
+    public void btnSave_validInput_finishesActivity() throws InterruptedException {
         try (ActivityScenario<AddWeightActivity> scenario =
                      ActivityScenario.launch(createIntent(testUserId))) {
             onView(withId(R.id.etWeight))
                     .perform(typeText("165.5"), closeSoftKeyboard());
             onView(withId(R.id.btnSaveWeight)).perform(click());
 
-            assertEquals(Lifecycle.State.DESTROYED, scenario.getState());
+            waitForDestroy(scenario);
         }
     }
 
@@ -151,27 +157,27 @@ public class AddWeightActivityTest {
     }
 
     @Test
-    public void onCreate_invalidUserId_finishesActivity() {
+    public void onCreate_invalidUserId_finishesActivity() throws InterruptedException {
         try (ActivityScenario<AddWeightActivity> scenario =
                      ActivityScenario.launch(createIntent(-1))) {
-            assertEquals(Lifecycle.State.DESTROYED, scenario.getState());
+            waitForDestroy(scenario);
         }
     }
 
     // --- Edge cases ---
 
     @Test
-    public void btnCancel_clicked_finishesActivity() {
+    public void btnCancel_clicked_finishesActivity() throws InterruptedException {
         try (ActivityScenario<AddWeightActivity> scenario =
                      ActivityScenario.launch(createIntent(testUserId))) {
             onView(withId(R.id.btnCancel)).perform(click());
 
-            assertEquals(Lifecycle.State.DESTROYED, scenario.getState());
+            waitForDestroy(scenario);
         }
     }
 
     @Test
-    public void btnSave_weightBelowGoal_savesAndFinishes() {
+    public void btnSave_weightBelowGoal_savesAndFinishes() throws InterruptedException {
         // User goal is 150.0, enter weight below goal → goal reached, save succeeds
         try (ActivityScenario<AddWeightActivity> scenario =
                      ActivityScenario.launch(createIntent(testUserId))) {
@@ -187,12 +193,12 @@ public class AddWeightActivityTest {
             cursor.close();
 
             // Activity should finish after successful save
-            assertEquals(Lifecycle.State.DESTROYED, scenario.getState());
+            waitForDestroy(scenario);
         }
     }
 
     @Test
-    public void btnSave_weightAboveGoal_doesNotTriggerGoalEvent() {
+    public void btnSave_weightAboveGoal_doesNotTriggerGoalEvent() throws InterruptedException {
         // Weight 165.5 > goal 150.0 → no congrats toast, just success
         try (ActivityScenario<AddWeightActivity> scenario =
                      ActivityScenario.launch(createIntent(testUserId))) {
@@ -201,7 +207,7 @@ public class AddWeightActivityTest {
             onView(withId(R.id.btnSaveWeight)).perform(click());
 
             // Activity should finish (weight saved successfully)
-            assertEquals(Lifecycle.State.DESTROYED, scenario.getState());
+            waitForDestroy(scenario);
         }
     }
 }
