@@ -5,27 +5,43 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.cs360weighttracker.R;
-import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.WeightEntry;
 
 import java.util.ArrayList;
 import java.util.Locale;
 
+/**
+ * RecyclerView adapter that binds {@link WeightEntry} data to
+ * item views and exposes edit/delete callbacks.
+ */
 public class WeightAdapter extends RecyclerView.Adapter<WeightAdapter.WeightViewHolder> {
 
-    private final ArrayList<WeightEntry> entries;
-    private final DatabaseHelper dbHelper;
-    private final Runnable onDataChanged;
+    public interface OnDeleteListener {
+        void onDelete(int weightId);
+    }
 
-    public WeightAdapter(ArrayList<WeightEntry> entries, DatabaseHelper dbHelper, Runnable onDataChanged) {
+    public interface OnEditListener {
+        void onEdit(WeightEntry entry);
+    }
+
+    private final ArrayList<WeightEntry> entries;
+    private final OnDeleteListener deleteListener;
+    private final OnEditListener editListener;
+
+    /**
+     * @param entries       mutable list that the Activity updates
+     * @param deleteListener callback invoked when delete is tapped
+     * @param editListener   callback invoked when an item is tapped
+     */
+    public WeightAdapter(ArrayList<WeightEntry> entries, OnDeleteListener deleteListener, OnEditListener editListener) {
         this.entries = entries;
-        this.dbHelper = dbHelper;
-        this.onDataChanged = onDataChanged;
+        this.deleteListener = deleteListener;
+        this.editListener = editListener;
     }
 
     @NonNull
@@ -42,13 +58,11 @@ public class WeightAdapter extends RecyclerView.Adapter<WeightAdapter.WeightView
         holder.tvWeight.setText(String.format(Locale.US,"%.1f lbs", entry.weight));
 
         holder.btnDelete.setOnClickListener(v -> {
-            boolean deleted = dbHelper.deleteWeight(entry.id);
-            if (deleted) {
-                Toast.makeText(v.getContext(), "Entry deleted", Toast.LENGTH_SHORT).show();
-                onDataChanged.run();
-            } else {
-                Toast.makeText(v.getContext(), "Delete failed", Toast.LENGTH_SHORT).show();
-            }
+            if (deleteListener != null) deleteListener.onDelete(entry.id);
+        });
+
+        holder.itemView.setOnClickListener(v -> {
+            if (editListener != null) editListener.onEdit(entry);
         });
     }
 

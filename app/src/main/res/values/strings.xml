@@ -16,6 +16,9 @@
     <string name="delete_button">Delete</string>
     <string name="save_button">Save</string>
     <string name="cancel_button">Cancel</string>
+    <string name="update_button">Update</string>
+    <string name="edit_weight_title">Edit Weight</string>
+    <string name="profile_title">Profile</string>
     <string name="date_label">Date</string>
     <string name="weight_label">Weight</string>
     <string name="action_label">Action</string>

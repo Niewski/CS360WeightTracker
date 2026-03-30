@@ -65,7 +65,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public int loginUser(String username, String password) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT id FROM users WHERE username=? AND password=?",
+        Cursor cursor = db.rawQuery("SELECT id FROM users WHERE username=? AND password= ?",
                 new String[]{username, password});
         int userId = -1;
         if (cursor.moveToFirst()) {
@@ -105,6 +105,37 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
     }
 
+    public UserProfile getUserProfile(int userId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT username, goal_weight, phone_number FROM users WHERE id=?",
+                new String[]{String.valueOf(userId)});
+        UserProfile profile = null;
+        if (cursor.moveToFirst()) {
+            String username = cursor.getString(cursor.getColumnIndexOrThrow("username"));
+            double goalWeight = cursor.getDouble(cursor.getColumnIndexOrThrow("goal_weight"));
+            String phone = cursor.getString(cursor.getColumnIndexOrThrow("phone_number"));
+            profile = new UserProfile(username, goalWeight, phone);
+        }
+        cursor.close();
+        return profile;
+    }
+
+    public boolean updateUser(int userId, double goalWeight, String phoneNumber) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Only reset SMS flag when goal weight actually changes
+        double currentGoal = getGoalWeight(userId);
+
+        ContentValues values = new ContentValues();
+        values.put("goal_weight", goalWeight);
+        values.put("phone_number", phoneNumber);
+        if (Double.compare(currentGoal, goalWeight) != 0) {
+            values.put("goal_reached_sent", 0);
+        }
+        int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
+        return rows > 0;
+    }
+
     // --- Weight Logic ---
     public boolean addWeight(int userId, String date, double weight) {
         SQLiteDatabase db = getWritableDatabase();
@@ -123,6 +154,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         );
     }
 
+    public boolean updateWeight(int weightId, String date, double weight) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("date", date);
+        values.put("weight", weight);
+        int rows = db.update(TABLE_WEIGHTS, values, "id=?", new String[]{String.valueOf(weightId)});
+        return rows > 0;
+    }
+
     public boolean deleteWeight(int weightId) {
         SQLiteDatabase db = getWritableDatabase();
         return db.delete(TABLE_WEIGHTS, "id=?", new String[]{String.valueOf(weightId)}) > 0;
@@ -138,9 +178,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cursor.close();
         return goalWeight;
     }
-
-
-
 }
 
 
