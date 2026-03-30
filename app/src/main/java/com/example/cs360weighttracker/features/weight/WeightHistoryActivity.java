@@ -17,7 +17,6 @@ import com.example.cs360weighttracker.data.WeightRepository;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Main screen of the application — displays the logged-in user's weight
