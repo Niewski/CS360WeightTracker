@@ -3,6 +3,7 @@ package com.example.cs360weighttracker.data;
 import android.database.Cursor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -90,5 +91,18 @@ public class WeightRepository {
      */
     public boolean deleteWeight(int weightId) {
         return dbHelper.deleteWeight(weightId);
+    }
+
+    /**
+     * Retrieves all weight entries for the specified user, ordered by date
+     * ascending (oldest first) — suitable for analytics calculations.
+     *
+     * @param userId the owning user's primary-key ID
+     * @return a list of weight entries sorted ascending by date
+     */
+    public List<WeightEntry> getWeightsAscending(int userId) {
+        List<WeightEntry> list = getWeights(userId);
+        Collections.sort(list);
+        return list;
     }
 }
