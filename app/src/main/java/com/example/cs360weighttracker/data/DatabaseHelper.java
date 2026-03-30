@@ -9,7 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "weight_tracker.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     // Table names
     private static final String TABLE_USERS = "users";
@@ -35,20 +35,31 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         // Create Weights Table
         String createWeightsTable = "CREATE TABLE IF NOT EXISTS " + TABLE_WEIGHTS + " (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "userId INTEGER, " +
-                "date TEXT, " +
-                "weight REAL)";
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            "userId INTEGER, " +
+            "date TEXT, " +
+            "weight REAL)";
         db.execSQL(createWeightsTable);
+
+        // Compound index for efficient user+date lookups
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_weights_user_date ON "
+            + TABLE_WEIGHTS + "(userId, date)");
     }
 
     // onUpgrade is called when DATABASE_VERSION is incremented
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // For simplicity, drop and recreate
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_WEIGHTS);
-        onCreate(db);
+        if (oldVersion < 3) {
+            // Legacy path — drop and recreate
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_WEIGHTS);
+            onCreate(db);
+            return;
+        }
+        if (oldVersion < 4) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_weights_user_date ON "
+                + TABLE_WEIGHTS + "(userId, date)");
+        }
     }
 
     // --- User Logic ---
