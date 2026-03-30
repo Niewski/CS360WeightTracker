@@ -177,6 +177,14 @@ public class WeightHistoryViewModelTest {
         assertEquals(1, result.size());
     }
 
+    @Test
+    public void deleteWeight_beforeInit_returnsFalse() {
+        // ViewModel not initialized — deleteWeight should return false safely
+        WeightHistoryViewModel uninitVM = new WeightHistoryViewModel();
+        boolean result = uninitVM.deleteWeight(1);
+        assertFalse(result);
+    }
+
     // --- Fake repository ---
 
     private static class FakeWeightRepository extends WeightRepository {

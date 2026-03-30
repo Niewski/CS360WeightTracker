@@ -62,6 +62,9 @@ public class WeightHistoryViewModel extends ViewModel {
      * @return {@code true} if deletion succeeded
      */
     public boolean deleteWeight(int weightId) {
+        if (repository == null || userId == -1) {
+            return false;
+        }
         boolean deleted = repository.deleteWeight(weightId);
         if (deleted) {
             loadWeights();
