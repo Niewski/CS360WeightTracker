@@ -88,7 +88,9 @@ public class AddWeightActivity extends AppCompatActivity {
 
             if (phone == null || phone.isEmpty()) {
                 Toast.makeText(this, "Congrats on reaching your goal!", Toast.LENGTH_LONG).show();
-                return; // do not mark SMS sent
+                // Mark goal notification as handled so we don't keep showing this Toast
+                viewModel.markGoalSmsSent();
+                return;
             }
 
             pendingPhone = phone;
