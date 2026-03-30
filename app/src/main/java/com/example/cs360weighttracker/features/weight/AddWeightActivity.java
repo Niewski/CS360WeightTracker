@@ -73,6 +73,47 @@ public class AddWeightActivity extends AppCompatActivity {
         String formattedDate = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, day);
         etDate.setText(formattedDate);
 
+        etDate.setOnClickListener(v -> {
+            // Use current value in the field if parsable; otherwise, fall back to today
+            Calendar initialCalendar = Calendar.getInstance();
+            String currentText = etDate.getText().toString();
+            if (currentText != null && !currentText.isEmpty()) {
+                String[] parts = currentText.split("-");
+                if (parts.length == 3) {
+                    try {
+                        int parsedYear = Integer.parseInt(parts[0]);
+                        int parsedMonth = Integer.parseInt(parts[1]) - 1;
+                        int parsedDay = Integer.parseInt(parts[2]);
+                        initialCalendar.set(parsedYear, parsedMonth, parsedDay);
+                    } catch (NumberFormatException ignored) {
+                        // Fallback to today's date if parsing fails
+                    }
+                }
+            }
+
+            int initYear = initialCalendar.get(Calendar.YEAR);
+            int initMonth = initialCalendar.get(Calendar.MONTH);
+            int initDay = initialCalendar.get(Calendar.DAY_OF_MONTH);
+
+            DatePickerDialog datePickerDialog = new DatePickerDialog(
+                    AddWeightActivity.this,
+                    (view, selectedYear, selectedMonth, selectedDayOfMonth) -> {
+                        String selectedDate = String.format(
+                                Locale.US,
+                                "%04d-%02d-%02d",
+                                selectedYear,
+                                selectedMonth + 1,
+                                selectedDayOfMonth
+                        );
+                        etDate.setText(selectedDate);
+                    },
+                    initYear,
+                    initMonth,
+                    initDay
+            );
+            datePickerDialog.show();
+        });
+
         DatabaseHelper dbHelper = new DatabaseHelper(this);
         WeightRepository weightRepository = new WeightRepository(dbHelper);
         UserRepository userRepository = new UserRepository(dbHelper);

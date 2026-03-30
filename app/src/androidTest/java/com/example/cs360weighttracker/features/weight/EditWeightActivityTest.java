@@ -27,6 +27,8 @@ import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
+import static androidx.test.espresso.matcher.ViewMatchers.withClassName;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -71,8 +73,12 @@ public class EditWeightActivityTest {
     }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {
-        // Allow finish() to propagate through the lifecycle
-        Thread.sleep(1000);
+        // Poll for DESTROYED state with timeout (emulator can be slow)
+        long deadline = System.currentTimeMillis() + 5000;
+        while (scenario.getState() != Lifecycle.State.DESTROYED
+                && System.currentTimeMillis() < deadline) {
+            Thread.sleep(100);
+        }
         assertEquals(Lifecycle.State.DESTROYED, scenario.getState());
     }
 
@@ -216,6 +222,48 @@ public class EditWeightActivityTest {
             double weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight"));
             assertEquals(TEST_WEIGHT, weight, 0.01);
             cursor.close();
+        }
+    }
+
+    // --- DatePicker tests ---
+
+    @Test
+    public void etDate_clicked_opensDatePicker() throws InterruptedException {
+        try (ActivityScenario<EditWeightActivity> scenario =
+                     ActivityScenario.launch(createIntent(testUserId, testWeightId, TEST_DATE, TEST_WEIGHT))) {
+            onView(withId(R.id.etDate)).perform(click());
+            Thread.sleep(500);
+
+            // DatePickerDialog should be visible
+            onView(withClassName(equalTo("android.widget.DatePicker")))
+                    .check(matches(isDisplayed()));
+        }
+    }
+
+    @Test
+    public void etDate_datePickerConfirmed_retainsExistingDate() throws InterruptedException {
+        try (ActivityScenario<EditWeightActivity> scenario =
+                     ActivityScenario.launch(createIntent(testUserId, testWeightId, TEST_DATE, TEST_WEIGHT))) {
+            // Open the picker and confirm without changing date
+            onView(withId(R.id.etDate)).perform(click());
+            Thread.sleep(500);
+            onView(withId(android.R.id.button1)).perform(click());
+
+            // Field should still show the pre-populated date
+            onView(withId(R.id.etDate)).check(matches(withText(TEST_DATE)));
+        }
+    }
+
+    @Test
+    public void etDate_datePickerCancelled_retainsExistingDate() throws InterruptedException {
+        try (ActivityScenario<EditWeightActivity> scenario =
+                     ActivityScenario.launch(createIntent(testUserId, testWeightId, TEST_DATE, TEST_WEIGHT))) {
+            onView(withId(R.id.etDate)).perform(click());
+            Thread.sleep(500);
+            onView(withId(android.R.id.button2)).perform(click());
+
+            // Field should still show the original date after cancel
+            onView(withId(R.id.etDate)).check(matches(withText(TEST_DATE)));
         }
     }
 }

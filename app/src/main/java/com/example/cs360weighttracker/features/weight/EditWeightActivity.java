@@ -68,17 +68,22 @@ public class EditWeightActivity extends AppCompatActivity {
         etDate.setText(existingDate);
         etWeight.setText(String.format(Locale.US, "%.1f", existingWeight));
 
-        // Date picker on click
+        // Date picker on click — use current field text so reopening shows latest selection
         Calendar calendar = Calendar.getInstance();
         etDate.setOnClickListener(v -> {
             int year = calendar.get(Calendar.YEAR);
             int month = calendar.get(Calendar.MONTH);
             int day = calendar.get(Calendar.DAY_OF_MONTH);
-            if (existingDate != null && existingDate.matches("\\d{4}-\\d{2}-\\d{2}")) {
-                String[] parts = existingDate.split("-");
-                year = Integer.parseInt(parts[0]);
-                month = Integer.parseInt(parts[1]) - 1;
-                day = Integer.parseInt(parts[2]);
+            String currentText = etDate.getText().toString();
+            if (currentText != null && currentText.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                String[] parts = currentText.split("-");
+                try {
+                    year = Integer.parseInt(parts[0]);
+                    month = Integer.parseInt(parts[1]) - 1;
+                    day = Integer.parseInt(parts[2]);
+                } catch (NumberFormatException ignored) {
+                    // fall back to today's date
+                }
             }
             DatePickerDialog dpd = new DatePickerDialog(EditWeightActivity.this,
                     (view, y, m, d) -> etDate.setText(String.format(Locale.US, "%04d-%02d-%02d", y, m + 1, d)),
