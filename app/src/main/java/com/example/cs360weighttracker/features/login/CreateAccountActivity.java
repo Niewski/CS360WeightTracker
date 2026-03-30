@@ -32,7 +32,6 @@ public class CreateAccountActivity extends AppCompatActivity {
     EditText etUsername, etPassword, etGoalWeight, etPhoneNumber;
     Button btnCreate;
     CreateAccountViewModel viewModel;
-    private String pendingPhoneForPermission = null;
 
     /**
      * Inflates the layout, initializes the ViewModel, and observes the
@@ -61,7 +60,6 @@ public class CreateAccountActivity extends AppCompatActivity {
                 Toast.makeText(this, "Account created.", Toast.LENGTH_SHORT).show();
                 String phone = etPhoneNumber.getText().toString();
                 if (!phone.isEmpty()) {
-                    pendingPhoneForPermission = phone;
                     requestSmsPermission();
                 } else {
                     proceedToLogin();
@@ -110,7 +108,6 @@ public class CreateAccountActivity extends AppCompatActivity {
             }
 
             // In both cases, proceed to login screen
-            pendingPhoneForPermission = null;
             proceedToLogin();
         }
     }
