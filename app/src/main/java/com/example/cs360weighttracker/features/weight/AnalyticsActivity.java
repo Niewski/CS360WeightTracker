@@ -92,6 +92,7 @@ public class AnalyticsActivity extends AppCompatActivity {
             tvStreak.setText(getString(R.string.na_label));
             tvLongestStreak.setText(getString(R.string.na_label));
             tvProjectedGoal.setText(getString(R.string.no_entries));
+            llMovingAverages.removeAllViews();
             return;
         }
 
@@ -120,10 +121,14 @@ public class AnalyticsActivity extends AppCompatActivity {
         tvAverageWeight.setText(String.format(Locale.US, "%.1f lbs", result.average));
 
         // Streak
-        tvStreak.setText(String.format(Locale.US, "%d %s", result.streak, getString(R.string.days_label)));
+        String currentStreakText = getResources().getQuantityString(
+            R.plurals.days, result.streak, result.streak);
+        tvStreak.setText(currentStreakText);
 
         // Longest streak
-        tvLongestStreak.setText(String.format(Locale.US, "%d %s", result.longestStreak, getString(R.string.days_label)));
+        String longestStreakText = getResources().getQuantityString(
+            R.plurals.days, result.longestStreak, result.longestStreak);
+        tvLongestStreak.setText(longestStreakText);
 
         // Projected goal date
         if (result.projectedGoalDate != null) {

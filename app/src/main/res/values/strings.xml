@@ -44,4 +44,8 @@
     <string name="days_label">days</string>
     <string name="na_label">N/A</string>
     <string name="statistics_header">Statistics</string>
+    <plurals name="days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
 </resources>
