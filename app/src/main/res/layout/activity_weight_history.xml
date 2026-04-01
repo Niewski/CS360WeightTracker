@@ -41,6 +41,13 @@
         android:layout_marginTop="8dp"
         android:layout_marginEnd="12dp"/>
 
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/buttonBarrier"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:barrierDirection="bottom"
+        app:constraint_referenced_ids="btnAnalytics,btnProfile" />
+
     <!-- Header Row -->
     <LinearLayout
         android:id="@+id/headerRow"
@@ -49,7 +56,7 @@
         android:orientation="horizontal"
         android:padding="12dp"
         android:background="#EEEEEE"
-        app:layout_constraintTop_toBottomOf="@id/btnAnalytics"
+        app:layout_constraintTop_toBottomOf="@id/buttonBarrier"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="8dp">
