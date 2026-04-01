@@ -15,7 +15,11 @@ public class WeightEntry implements Comparable<WeightEntry> {
 
     @Override
     public int compareTo(WeightEntry other) {
-        return this.date.compareTo(other.date);
+        int dateComparison = this.date.compareTo(other.date);
+        if (dateComparison != 0) {
+            return dateComparison;
+        }
+        return Integer.compare(this.id, other.id);
     }
 
     @Override
