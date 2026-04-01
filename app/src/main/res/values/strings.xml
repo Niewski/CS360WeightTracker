@@ -16,6 +16,7 @@
     <string name="delete_button">Delete</string>
     <string name="save_button">Save</string>
     <string name="cancel_button">Cancel</string>
+    <string name="close_button">Close</string>
     <string name="update_button">Update</string>
     <string name="edit_weight_title">Edit Weight</string>
     <string name="profile_title">Profile</string>
@@ -24,4 +25,23 @@
     <string name="action_label">Action</string>
     <string name="goal_weight_hint">Goal Weight (lbs)</string>
     <string name="phone_number_hint">Phone Number (optional)</string>
+    <string name="analytics_title">Analytics</string>
+    <string name="analytics_button">Analytics</string>
+    <string name="current_weight_label">Current Weight</string>
+    <string name="goal_weight_label">Goal Weight</string>
+    <string name="total_change_label">Total Change</string>
+    <string name="rate_label">Rate (lbs/week)</string>
+    <string name="min_weight_label">Min</string>
+    <string name="max_weight_label">Max</string>
+    <string name="average_weight_label">Average</string>
+    <string name="streak_label">Current Streak</string>
+    <string name="longest_streak_label">Longest Streak</string>
+    <string name="projected_goal_label">Projected Goal Date</string>
+    <string name="moving_average_label">7-Day Moving Average</string>
+    <string name="not_enough_data">Not enough data</string>
+    <string name="goal_reached">Goal reached!</string>
+    <string name="no_entries">No weight entries yet</string>
+    <string name="days_label">days</string>
+    <string name="na_label">N/A</string>
+    <string name="statistics_header">Statistics</string>
 </resources>
