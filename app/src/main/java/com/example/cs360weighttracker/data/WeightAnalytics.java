@@ -50,12 +50,25 @@ public class WeightAnalytics {
             return 0.0;
         }
 
-        LocalDate startDate = LocalDate.parse(entries.get(0).date);
+        final LocalDate startDate;
+        try {
+            startDate = LocalDate.parse(entries.get(0).date);
+        } catch (DateTimeParseException e) {
+            return 0.0;
+        }
+
         int n = entries.size();
         double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
 
         for (int i = 0; i < n; i++) {
-            double x = ChronoUnit.DAYS.between(startDate, LocalDate.parse(entries.get(i).date));
+            final LocalDate currentDate;
+            try {
+                currentDate = LocalDate.parse(entries.get(i).date);
+            } catch (DateTimeParseException e) {
+                return 0.0;
+            }
+
+            double x = ChronoUnit.DAYS.between(startDate, currentDate);
             double y = entries.get(i).weight;
             sumX += x;
             sumY += y;
@@ -154,12 +167,20 @@ public class WeightAnalytics {
         }
 
         double ratePerDay = ratePerWeek / 7.0;
+        if (Math.abs(ratePerDay) < 0.01) {
+            return null; // near-zero slope — projection unreliable
+        }
+
         double weightToLose = latestWeight - goalWeight;
         long daysToGoal = (long) Math.ceil(weightToLose / Math.abs(ratePerDay));
 
-        LocalDate latestDate = LocalDate.parse(entries.get(entries.size() - 1).date);
-        LocalDate projectedDate = latestDate.plusDays(daysToGoal);
-        return projectedDate.toString();
+        try {
+            LocalDate latestDate = LocalDate.parse(entries.get(entries.size() - 1).date);
+            LocalDate projectedDate = latestDate.plusDays(daysToGoal);
+            return projectedDate.toString();
+        } catch (DateTimeParseException | ArithmeticException e) {
+            return null;
+        }
     }
 
     /**
