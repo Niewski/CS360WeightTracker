@@ -194,4 +194,40 @@ public class WeightAnalytics {
         return streak;
     }
 
+    /**
+     * Finds the longest run of consecutive days with a weight entry
+     * across the entire history. Entries must be sorted ascending by date.
+     *
+     * @param entries sorted list of weight entries (ascending by date)
+     * @return longest streak count (at least 1 if entries exist), or 0 if empty/null
+     */
+    public static int calculateLongestStreak(List<WeightEntry> entries) {
+        if (entries == null || entries.isEmpty()) {
+            return 0;
+        }
+        if (entries.size() == 1) {
+            return 1;
+        }
+
+        int longest = 1;
+        int current = 1;
+        for (int i = 1; i < entries.size(); i++) {
+            try {
+                LocalDate prev = LocalDate.parse(entries.get(i - 1).date);
+                LocalDate curr = LocalDate.parse(entries.get(i).date);
+                if (ChronoUnit.DAYS.between(prev, curr) == 1) {
+                    current++;
+                } else {
+                    current = 1;
+                }
+                if (current > longest) {
+                    longest = current;
+                }
+            } catch (DateTimeParseException e) {
+                current = 1;
+            }
+        }
+        return longest;
+    }
+
 }

@@ -309,4 +309,76 @@ public class WeightAnalyticsTest {
         assertEquals(0, WeightAnalytics.calculateStreak(null));
     }
 
+    // --- calculateLongestStreak ---
+
+    @Test
+    public void calculateLongestStreak_allConsecutive_returnsTotal() {
+        List<WeightEntry> entries = Arrays.asList(
+                new WeightEntry(1, "2026-01-13", 170.0),
+                new WeightEntry(2, "2026-01-14", 169.0),
+                new WeightEntry(3, "2026-01-15", 168.0)
+        );
+
+        assertEquals(3, WeightAnalytics.calculateLongestStreak(entries));
+    }
+
+    @Test
+    public void calculateLongestStreak_longestInMiddle_returnsLongest() {
+        List<WeightEntry> entries = Arrays.asList(
+                new WeightEntry(1, "2026-01-01", 172.0),
+                new WeightEntry(2, "2026-01-05", 171.0),
+                new WeightEntry(3, "2026-01-06", 170.0),
+                new WeightEntry(4, "2026-01-07", 169.0),
+                new WeightEntry(5, "2026-01-10", 168.0),
+                new WeightEntry(6, "2026-01-11", 167.0)
+        );
+
+        // Longest run is Jan 5-6-7 = 3 days
+        assertEquals(3, WeightAnalytics.calculateLongestStreak(entries));
+    }
+
+    @Test
+    public void calculateLongestStreak_longestAtEnd_returnsLongest() {
+        List<WeightEntry> entries = Arrays.asList(
+                new WeightEntry(1, "2026-01-01", 172.0),
+                new WeightEntry(2, "2026-01-02", 171.0),
+                new WeightEntry(3, "2026-01-10", 170.0),
+                new WeightEntry(4, "2026-01-11", 169.0),
+                new WeightEntry(5, "2026-01-12", 168.0)
+        );
+
+        // Longest run is Jan 10-11-12 = 3 days
+        assertEquals(3, WeightAnalytics.calculateLongestStreak(entries));
+    }
+
+    @Test
+    public void calculateLongestStreak_noConsecutive_returnsOne() {
+        List<WeightEntry> entries = Arrays.asList(
+                new WeightEntry(1, "2026-01-01", 172.0),
+                new WeightEntry(2, "2026-01-05", 171.0),
+                new WeightEntry(3, "2026-01-10", 170.0)
+        );
+
+        assertEquals(1, WeightAnalytics.calculateLongestStreak(entries));
+    }
+
+    @Test
+    public void calculateLongestStreak_singleEntry_returnsOne() {
+        List<WeightEntry> entries = Collections.singletonList(
+                new WeightEntry(1, "2026-01-15", 170.0)
+        );
+
+        assertEquals(1, WeightAnalytics.calculateLongestStreak(entries));
+    }
+
+    @Test
+    public void calculateLongestStreak_emptyList_returnsZero() {
+        assertEquals(0, WeightAnalytics.calculateLongestStreak(new ArrayList<>()));
+    }
+
+    @Test
+    public void calculateLongestStreak_nullList_returnsZero() {
+        assertEquals(0, WeightAnalytics.calculateLongestStreak(null));
+    }
+
 }
