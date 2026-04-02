@@ -132,6 +132,26 @@ public class WeightAnalyticsTest {
         assertEquals(0.0, WeightAnalytics.calculateRateOfChange(null), 0.01);
     }
 
+    @Test
+    public void calculateRateOfChange_malformedStartDate_returnsZero() {
+        List<WeightEntry> entries = Arrays.asList(
+                new WeightEntry(1, "bad-date", 170.0),
+                new WeightEntry(2, "2026-01-08", 168.0)
+        );
+
+        assertEquals(0.0, WeightAnalytics.calculateRateOfChange(entries), 0.01);
+    }
+
+    @Test
+    public void calculateRateOfChange_malformedLaterDate_returnsZero() {
+        List<WeightEntry> entries = Arrays.asList(
+                new WeightEntry(1, "2026-01-01", 170.0),
+                new WeightEntry(2, "bad-date", 168.0)
+        );
+
+        assertEquals(0.0, WeightAnalytics.calculateRateOfChange(entries), 0.01);
+    }
+
     // --- findMin / findMax ---
 
     @Test
@@ -263,6 +283,27 @@ public class WeightAnalyticsTest {
     @Test
     public void projectGoalDate_nullEntries_returnsNull() {
         assertNull(WeightAnalytics.projectGoalDate(null, 160.0));
+    }
+
+    @Test
+    public void projectGoalDate_malformedDate_returnsNull() {
+        List<WeightEntry> entries = Arrays.asList(
+                new WeightEntry(1, "2026-01-01", 170.0),
+                new WeightEntry(2, "bad-date", 165.0)
+        );
+
+        assertNull(WeightAnalytics.projectGoalDate(entries, 160.0));
+    }
+
+    @Test
+    public void projectGoalDate_nearZeroSlope_returnsNull() {
+        List<WeightEntry> entries = Arrays.asList(
+                new WeightEntry(1, "2026-01-01", 170.0),
+                new WeightEntry(2, "2026-01-08", 169.95)
+        );
+
+        // Rate is ~-0.05 lbs/week = ~-0.007 lbs/day, below 0.01 threshold
+        assertNull(WeightAnalytics.projectGoalDate(entries, 160.0));
     }
 
     // --- calculateStreak ---

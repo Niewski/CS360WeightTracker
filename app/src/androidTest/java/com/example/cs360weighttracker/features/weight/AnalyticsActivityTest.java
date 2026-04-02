@@ -300,8 +300,8 @@ public class AnalyticsActivityTest {
 
         try (ActivityScenario<AnalyticsActivity> scenario =
                      ActivityScenario.launch(createIntent(testUserId))) {
-            onView(withId(R.id.tvStreak)).check(matches(withText("1 days")));
-            onView(withId(R.id.tvLongestStreak)).check(matches(withText("1 days")));
+            onView(withId(R.id.tvStreak)).check(matches(withText("1 day")));
+            onView(withId(R.id.tvLongestStreak)).check(matches(withText("1 day")));
         }
     }
 
@@ -313,7 +313,7 @@ public class AnalyticsActivityTest {
 
         try (ActivityScenario<AnalyticsActivity> scenario =
                      ActivityScenario.launch(createIntent(testUserId))) {
-            onView(withId(R.id.tvStreak)).check(matches(withText("1 days")));
+            onView(withId(R.id.tvStreak)).check(matches(withText("1 day")));
             onView(withId(R.id.tvLongestStreak)).check(matches(withText("2 days")));
         }
     }
