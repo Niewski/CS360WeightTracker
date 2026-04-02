@@ -54,6 +54,7 @@ public class WeightHistoryActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.rvWeightEntries);
         FloatingActionButton fabAdd = findViewById(R.id.fabAddWeight);
         Button btnProfile = findViewById(R.id.btnProfile);
+        Button btnAnalytics = findViewById(R.id.btnAnalytics);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -89,6 +90,12 @@ public class WeightHistoryActivity extends AppCompatActivity {
 
         fabAdd.setOnClickListener(v -> {
             Intent intent = new Intent(this, AddWeightActivity.class);
+            intent.putExtra("userId", userId);
+            startActivity(intent);
+        });
+
+        btnAnalytics.setOnClickListener(v -> {
+            Intent intent = new Intent(this, AnalyticsActivity.class);
             intent.putExtra("userId", userId);
             startActivity(intent);
         });

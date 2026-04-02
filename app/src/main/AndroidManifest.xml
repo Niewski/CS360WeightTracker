@@ -29,6 +29,7 @@
         <activity android:name=".features.weight.WeightHistoryActivity" />
         <activity android:name=".features.weight.EditWeightActivity" />
         <activity android:name=".features.profile.ProfileActivity" />
+        <activity android:name=".features.weight.AnalyticsActivity" />
     </application>
 
 </manifest>
