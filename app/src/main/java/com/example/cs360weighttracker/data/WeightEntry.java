@@ -6,11 +6,17 @@ public class WeightEntry implements Comparable<WeightEntry> {
     public int id;
     public String date;
     public double weight;
+    public String notes;
 
     public WeightEntry(int id, String date, double weight) {
+        this(id, date, weight, "");
+    }
+
+    public WeightEntry(int id, String date, double weight, String notes) {
         this.id = id;
         this.date = date;
         this.weight = weight;
+        this.notes = notes != null ? notes : "";
     }
 
     @Override
