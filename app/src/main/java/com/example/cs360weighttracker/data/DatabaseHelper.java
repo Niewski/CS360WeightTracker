@@ -5,9 +5,11 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
+    private static final String TAG = "DatabaseHelper";
     private static final String DATABASE_NAME = "weight_tracker.db";
     private static final int DATABASE_VERSION = 5;
 
@@ -15,28 +17,41 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String TABLE_USERS = "users";
     private static final String TABLE_WEIGHTS = "weights";
 
+    private boolean fts5Available = true;
+
     // Constructor
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
     private void createFts5Table(SQLiteDatabase db) {
-        db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS weights_fts USING fts5("
-            + "notes, content=" + TABLE_WEIGHTS + ", content_rowid=id)");
+        try {
+            db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS weights_fts USING fts5("
+                + "notes, content=" + TABLE_WEIGHTS + ", content_rowid=id)");
+        } catch (Exception e) {
+            Log.w(TAG, "FTS5 module not available, full-text search disabled", e);
+            fts5Available = false;
+        }
     }
 
     private void createFts5Triggers(SQLiteDatabase db) {
-        db.execSQL("CREATE TRIGGER IF NOT EXISTS weights_ai AFTER INSERT ON " + TABLE_WEIGHTS
-            + " BEGIN INSERT INTO weights_fts(rowid, notes) VALUES (new.id, new.notes); END;");
+        if (!fts5Available) return;
+        try {
+            db.execSQL("CREATE TRIGGER IF NOT EXISTS weights_ai AFTER INSERT ON " + TABLE_WEIGHTS
+                + " BEGIN INSERT INTO weights_fts(rowid, notes) VALUES (new.id, new.notes); END;");
 
-        db.execSQL("CREATE TRIGGER IF NOT EXISTS weights_ad AFTER DELETE ON " + TABLE_WEIGHTS
-            + " BEGIN INSERT INTO weights_fts(weights_fts, rowid, notes) "
-            + "VALUES('delete', old.id, old.notes); END;");
+            db.execSQL("CREATE TRIGGER IF NOT EXISTS weights_ad AFTER DELETE ON " + TABLE_WEIGHTS
+                + " BEGIN INSERT INTO weights_fts(weights_fts, rowid, notes) "
+                + "VALUES('delete', old.id, old.notes); END;");
 
-        db.execSQL("CREATE TRIGGER IF NOT EXISTS weights_au AFTER UPDATE ON " + TABLE_WEIGHTS
-            + " BEGIN INSERT INTO weights_fts(weights_fts, rowid, notes) "
-            + "VALUES('delete', old.id, old.notes); "
-            + "INSERT INTO weights_fts(rowid, notes) VALUES (new.id, new.notes); END;");
+            db.execSQL("CREATE TRIGGER IF NOT EXISTS weights_au AFTER UPDATE ON " + TABLE_WEIGHTS
+                + " BEGIN INSERT INTO weights_fts(weights_fts, rowid, notes) "
+                + "VALUES('delete', old.id, old.notes); "
+                + "INSERT INTO weights_fts(rowid, notes) VALUES (new.id, new.notes); END;");
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to create FTS5 triggers", e);
+            fts5Available = false;
+        }
     }
 
     // onCreate is called only once when the database is first created
@@ -223,12 +238,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor searchWeightNotes(int userId, String query) {
         SQLiteDatabase db = getReadableDatabase();
-        // Use raw query with FTS5 match; caller should provide a safe query string when needed
-        String safeQuery = query;
+        if (fts5Available) {
+            return db.rawQuery(
+                "SELECT w.* FROM " + TABLE_WEIGHTS + " w JOIN weights_fts f ON f.rowid = w.id "
+                    + "WHERE f.notes MATCH ? AND w.userId=? ORDER BY w.date DESC",
+                new String[]{query, String.valueOf(userId)}
+            );
+        }
+        // Fallback to LIKE when FTS5 is not available
         return db.rawQuery(
-            "SELECT w.* FROM " + TABLE_WEIGHTS + " w JOIN weights_fts f ON f.rowid = w.id "
-                + "WHERE f.notes MATCH ? AND w.userId=? ORDER BY w.date DESC",
-            new String[]{safeQuery, String.valueOf(userId)}
+            "SELECT * FROM " + TABLE_WEIGHTS + " WHERE userId=? AND notes LIKE ? ORDER BY date DESC",
+            new String[]{String.valueOf(userId), "%" + query + "%"}
         );
     }
 
