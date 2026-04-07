@@ -36,7 +36,7 @@ public class AddWeightActivity extends AppCompatActivity {
 
     private static final int SMS_PERMISSION_CODE = 2001;
 
-    EditText etDate, etWeight;
+    EditText etDate, etWeight, etNotes;
     Button btnSave, btnCancel;
     AddWeightViewModel viewModel;
     int userId = -1;  // default/fallback
@@ -62,6 +62,7 @@ public class AddWeightActivity extends AppCompatActivity {
         // Hook up layout views
         etDate = findViewById(R.id.etDate);
         etWeight = findViewById(R.id.etWeight);
+        etNotes = findViewById(R.id.etNotes);
         btnSave = findViewById(R.id.btnSaveWeight);
         btnCancel = findViewById(R.id.btnCancel);
 
@@ -158,7 +159,8 @@ public class AddWeightActivity extends AppCompatActivity {
         btnSave.setOnClickListener(v -> {
             String date = etDate.getText().toString();
             String weightStr = etWeight.getText().toString();
-            viewModel.saveWeight(date, weightStr);
+            String notes = etNotes.getText() != null ? etNotes.getText().toString() : "";
+            viewModel.saveWeight(date, weightStr, notes);
         });
 
         btnCancel.setOnClickListener(v -> finish());

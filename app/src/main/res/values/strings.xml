@@ -9,6 +9,7 @@
     <string name="password_hint">Enter Password</string>
     <string name="date_hint">Date</string>
     <string name="weight_hint">Weight (lbs)</string>
+    <string name="notes_hint">Notes (optional)</string>
     <string name="login_button">Log In</string>
     <string name="create_account_button">Create Account</string>
     <string name="add_entry_button">Add Entry</string>

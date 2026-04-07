@@ -25,7 +25,7 @@ import java.util.Locale;
  */
 public class EditWeightActivity extends AppCompatActivity {
 
-    EditText etDate, etWeight;
+    EditText etDate, etWeight, etNotes;
     Button btnUpdate, btnCancel;
     EditWeightViewModel viewModel;
     int userId = -1;
@@ -55,6 +55,7 @@ public class EditWeightActivity extends AppCompatActivity {
         // Hook up layout views
         etDate = findViewById(R.id.etDate);
         etWeight = findViewById(R.id.etWeight);
+        etNotes = findViewById(R.id.etNotes);
         btnUpdate = findViewById(R.id.btnUpdateWeight);
         btnCancel = findViewById(R.id.btnCancel);
 
@@ -67,6 +68,8 @@ public class EditWeightActivity extends AppCompatActivity {
         // Pre-populate with existing values
         etDate.setText(existingDate);
         etWeight.setText(String.format(Locale.US, "%.1f", existingWeight));
+        String existingNotes = getIntent().getStringExtra("notes");
+        if (existingNotes != null) etNotes.setText(existingNotes);
 
         // Date picker on click — use current field text so reopening shows latest selection
         Calendar calendar = Calendar.getInstance();
@@ -104,7 +107,8 @@ public class EditWeightActivity extends AppCompatActivity {
         btnUpdate.setOnClickListener(v -> {
             String date = etDate.getText().toString();
             String weightStr = etWeight.getText().toString();
-            viewModel.updateWeight(date, weightStr);
+            String notes = etNotes.getText() != null ? etNotes.getText().toString() : "";
+            viewModel.updateWeight(date, weightStr, notes);
         });
 
         btnCancel.setOnClickListener(v -> finish());
