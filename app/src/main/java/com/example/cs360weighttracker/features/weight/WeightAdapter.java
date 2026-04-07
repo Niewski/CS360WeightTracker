@@ -56,6 +56,12 @@ public class WeightAdapter extends RecyclerView.Adapter<WeightAdapter.WeightView
         WeightEntry entry = entries.get(position);
         holder.tvDate.setText(entry.date);
         holder.tvWeight.setText(String.format(Locale.US,"%.1f lbs", entry.weight));
+        if (entry.notes != null && !entry.notes.isEmpty()) {
+            holder.tvNotes.setText(entry.notes);
+            holder.tvNotes.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvNotes.setVisibility(View.GONE);
+        }
 
         holder.btnDelete.setOnClickListener(v -> {
             if (deleteListener != null) deleteListener.onDelete(entry.id);
@@ -72,13 +78,14 @@ public class WeightAdapter extends RecyclerView.Adapter<WeightAdapter.WeightView
     }
 
     public static class WeightViewHolder extends RecyclerView.ViewHolder {
-        TextView tvDate, tvWeight;
+        TextView tvDate, tvWeight, tvNotes;
         ImageButton btnDelete;
 
         public WeightViewHolder(@NonNull View itemView) {
             super(itemView);
             tvDate = itemView.findViewById(R.id.tvDate);
             tvWeight = itemView.findViewById(R.id.tvWeight);
+            tvNotes = itemView.findViewById(R.id.tvNotes);
             btnDelete = itemView.findViewById(R.id.btnDelete);
         }
     }
