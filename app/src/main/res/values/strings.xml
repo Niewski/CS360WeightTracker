@@ -49,4 +49,24 @@
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>
     </plurals>
+    <string name="search_hint">Search notes…</string>
+    <string name="date_range_button">Date Range</string>
+    <string name="clear_filter_button">Clear</string>
+    <string name="export_button">Export</string>
+    <string name="import_button">Import</string>
+    <string name="export_success">Export successful</string>
+    <string name="export_failed">Export failed</string>
+    <string name="import_failed">Import failed</string>
+    <plurals name="import_count">
+        <item quantity="one">%d entry imported</item>
+        <item quantity="other">%d entries imported</item>
+    </plurals>
+    <string name="period_label">Period</string>
+    <string name="avg_weight_label">Avg Weight</string>
+    <string name="entries_label">Entries</string>
+    <string-array name="summary_modes">
+        <item>Daily Entries</item>
+        <item>Weekly Averages</item>
+        <item>Monthly Averages</item>
+    </string-array>
 </resources>
