@@ -11,7 +11,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "DatabaseHelper";
     private static final String DATABASE_NAME = "weight_tracker.db";
-    private static final int DATABASE_VERSION = 5;
+    private static final int DATABASE_VERSION = 6;
 
     // Table names
     private static final String TABLE_USERS = "users";
@@ -118,6 +118,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             } catch (Exception ignored) {
             }
         }
+        if (oldVersion < 6) {
+            // Hash all existing plain-text passwords with bcrypt (transactional)
+            db.beginTransaction();
+            try {
+                Cursor cursor = db.rawQuery("SELECT id, password FROM " + TABLE_USERS, null);
+                while (cursor.moveToNext()) {
+                    int id = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                    String plainPassword = cursor.getString(cursor.getColumnIndexOrThrow("password"));
+                    if (plainPassword != null && !plainPassword.startsWith("$2a$")) {
+                        String hashedPassword = PasswordUtils.hashPassword(plainPassword);
+                        ContentValues values = new ContentValues();
+                        values.put("password", hashedPassword);
+                        db.update(TABLE_USERS, values, "id=?", new String[]{String.valueOf(id)});
+                    }
+                }
+                cursor.close();
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        }
     }
 
     // --- User Logic ---
@@ -125,7 +146,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put("username", username);
-        values.put("password", password);
+        values.put("password", PasswordUtils.hashPassword(password));
         values.put("goal_weight", goalWeight);
         values.put("phone_number", phoneNumber);
         long result = db.insert("users", null, values);
@@ -134,11 +155,26 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public int loginUser(String username, String password) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT id FROM users WHERE username=? AND password= ?",
-                new String[]{username, password});
+        Cursor cursor = db.rawQuery("SELECT id, password FROM users WHERE username=?",
+                new String[]{username});
         int userId = -1;
         if (cursor.moveToFirst()) {
-            userId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+            String storedHash = cursor.getString(cursor.getColumnIndexOrThrow("password"));
+            if (storedHash != null && storedHash.startsWith("$2a$")) {
+                // Bcrypt path
+                if (PasswordUtils.checkPassword(password, storedHash)) {
+                    userId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                }
+            } else {
+                // Legacy plain-text fallback — hash and upgrade on success
+                if (storedHash != null && storedHash.equals(password)) {
+                    userId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                    ContentValues values = new ContentValues();
+                    values.put("password", PasswordUtils.hashPassword(password));
+                    getWritableDatabase().update("users", values, "id=?",
+                            new String[]{String.valueOf(userId)});
+                }
+            }
         }
         cursor.close();
         return userId;
