@@ -39,6 +39,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 /**
  * Main screen of the application — displays the logged-in user's weight
  * history as a scrollable list.
@@ -253,6 +255,13 @@ public class WeightHistoryActivity extends AppCompatActivity {
             intent.setType("text/*");
             importLauncher.launch(intent);
         });
+    }
+
+    private String formatMillisToDate(Long millis) {
+        if (millis == null) return null;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return sdf.format(new Date(millis));
     }
 
     /**

@@ -255,7 +255,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public Cursor getWeeklyAverages(int userId) {
         SQLiteDatabase db = getReadableDatabase();
         return db.rawQuery(
-            "SELECT strftime('%Y-W%W', date) AS period, AVG(weight) as average, COUNT(*) as entryCount "
+            "SELECT strftime('%Y-W%W', date) AS period, AVG(weight) as average, AVG(weight) as avg_weight, COUNT(*) as entryCount "
                 + "FROM " + TABLE_WEIGHTS + " WHERE userId=? GROUP BY period ORDER BY period DESC",
             new String[]{String.valueOf(userId)}
         );
@@ -264,7 +264,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public Cursor getMonthlyAverages(int userId) {
         SQLiteDatabase db = getReadableDatabase();
         return db.rawQuery(
-            "SELECT strftime('%Y-%m', date) AS period, AVG(weight) as average, COUNT(*) as entryCount "
+            "SELECT strftime('%Y-%m', date) AS period, AVG(weight) as average, AVG(weight) as avg_weight, COUNT(*) as entryCount "
                 + "FROM " + TABLE_WEIGHTS + " WHERE userId=? GROUP BY period ORDER BY period DESC",
             new String[]{String.valueOf(userId)}
         );

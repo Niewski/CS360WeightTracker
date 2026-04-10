@@ -41,7 +41,7 @@ public class AddWeightViewModelTest {
         fakeUserRepo.goalWeight = 150.0;
         fakeUserRepo.goalSmsSent = false;
 
-        viewModel.saveWeight("2026-01-15", "165.5");
+        viewModel.saveWeight("2026-01-15", "165.5", "feeling good");
 
         assertTrue(viewModel.getSaveResult().getValue());
     }
@@ -50,28 +50,28 @@ public class AddWeightViewModelTest {
 
     @Test
     public void saveWeight_emptyDate_returnsFalse() {
-        viewModel.saveWeight("", "165.5");
+        viewModel.saveWeight("", "165.5", "");
 
         assertFalse(viewModel.getSaveResult().getValue());
     }
 
     @Test
     public void saveWeight_emptyWeight_returnsFalse() {
-        viewModel.saveWeight("2026-01-15", "");
+        viewModel.saveWeight("2026-01-15", "", "");
 
         assertFalse(viewModel.getSaveResult().getValue());
     }
 
     @Test
     public void saveWeight_bothEmpty_returnsFalse() {
-        viewModel.saveWeight("", "");
+        viewModel.saveWeight("", "", "");
 
         assertFalse(viewModel.getSaveResult().getValue());
     }
 
     @Test
     public void saveWeight_invalidNumber_returnsFalse() {
-        viewModel.saveWeight("2026-01-15", "abc");
+        viewModel.saveWeight("2026-01-15", "abc", "");
 
         assertFalse(viewModel.getSaveResult().getValue());
     }
@@ -80,7 +80,7 @@ public class AddWeightViewModelTest {
     public void saveWeight_insertFails_returnsFalse() {
         fakeWeightRepo.addWeightReturn = false;
 
-        viewModel.saveWeight("2026-01-15", "165.5");
+        viewModel.saveWeight("2026-01-15", "165.5", "");
 
         assertFalse(viewModel.getSaveResult().getValue());
     }
@@ -94,7 +94,7 @@ public class AddWeightViewModelTest {
         fakeUserRepo.goalSmsSent = false;
         fakeUserRepo.phoneNumber = "5551234567";
 
-        viewModel.saveWeight("2026-01-15", "165.5");
+        viewModel.saveWeight("2026-01-15", "165.5", "");
 
         AddWeightViewModel.GoalReachedEvent event = viewModel.getGoalReachedEvent().getValue();
         assertNotNull(event);
@@ -108,7 +108,7 @@ public class AddWeightViewModelTest {
         fakeUserRepo.goalSmsSent = false;
         fakeUserRepo.phoneNumber = "5551234567";
 
-        viewModel.saveWeight("2026-01-15", "165.5");
+        viewModel.saveWeight("2026-01-15", "165.5", "");
 
         AddWeightViewModel.GoalReachedEvent event = viewModel.getGoalReachedEvent().getValue();
         assertNotNull(event);
@@ -122,7 +122,7 @@ public class AddWeightViewModelTest {
         fakeUserRepo.goalSmsSent = true;
         fakeUserRepo.phoneNumber = "5551234567";
 
-        viewModel.saveWeight("2026-01-15", "165.5");
+        viewModel.saveWeight("2026-01-15", "165.5", "");
 
         assertNull(viewModel.getGoalReachedEvent().getValue());
     }
@@ -133,7 +133,7 @@ public class AddWeightViewModelTest {
         fakeUserRepo.goalWeight = 150.0;
         fakeUserRepo.goalSmsSent = false;
 
-        viewModel.saveWeight("2026-01-15", "165.5");
+        viewModel.saveWeight("2026-01-15", "165.5", "");
 
         assertNull(viewModel.getGoalReachedEvent().getValue());
     }
@@ -145,7 +145,7 @@ public class AddWeightViewModelTest {
         fakeUserRepo.goalSmsSent = false;
         fakeUserRepo.phoneNumber = null;
 
-        viewModel.saveWeight("2026-01-15", "165.5");
+        viewModel.saveWeight("2026-01-15", "165.5", "");
 
         AddWeightViewModel.GoalReachedEvent event = viewModel.getGoalReachedEvent().getValue();
         assertNotNull(event);
@@ -159,7 +159,7 @@ public class AddWeightViewModelTest {
         fakeWeightRepo.addWeightReturn = true;
         fakeUserRepo.goalWeight = 150.0;
 
-        viewModel.saveWeight("2026-01-15", "0.0");
+        viewModel.saveWeight("2026-01-15", "0.0", "");
 
         assertTrue(viewModel.getSaveResult().getValue());
     }
@@ -169,7 +169,7 @@ public class AddWeightViewModelTest {
         fakeWeightRepo.addWeightReturn = true;
         fakeUserRepo.goalWeight = 150.0;
 
-        viewModel.saveWeight("2026-01-15", "-5.0");
+        viewModel.saveWeight("2026-01-15", "-5.0", "");
 
         assertTrue(viewModel.getSaveResult().getValue());
     }
@@ -187,7 +187,7 @@ public class AddWeightViewModelTest {
         // First repo should still be used; set it to succeed
         fakeWeightRepo.addWeightReturn = true;
         fakeUserRepo.goalWeight = 150.0;
-        viewModel.saveWeight("2026-01-15", "165.5");
+        viewModel.saveWeight("2026-01-15", "165.5", "");
 
         assertTrue(viewModel.getSaveResult().getValue());
     }
@@ -211,7 +211,7 @@ public class AddWeightViewModelTest {
         }
 
         @Override
-        public boolean addWeight(int userId, String date, double weight) {
+        public boolean addWeight(int userId, String date, double weight, String notes) {
             return addWeightReturn;
         }
     }

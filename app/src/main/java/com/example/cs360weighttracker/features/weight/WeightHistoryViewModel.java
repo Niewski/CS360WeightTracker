@@ -37,7 +37,7 @@ public class WeightHistoryViewModel extends ViewModel {
 
     /** Aggregated averages shown in display modes 1 (weekly) and 2 (monthly). */
     private final MutableLiveData<List<TimePeriodAverage>> summaryData =
-        new MutableLiveData<>(Collections.emptyList());
+        new MutableLiveData<>();
 
     /** Current display mode: 0 = entries, 1 = weekly, 2 = monthly. */
     private final MutableLiveData<Integer> displayMode = new MutableLiveData<>(0);
