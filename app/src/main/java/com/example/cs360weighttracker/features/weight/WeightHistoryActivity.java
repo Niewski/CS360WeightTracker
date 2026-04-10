@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.text.SimpleDateFormat;
@@ -58,6 +57,7 @@ public class WeightHistoryActivity extends AppCompatActivity {
     private int userId;
     private final ArrayList<WeightEntry> weightList = new ArrayList<>();
     private WeightHistoryViewModel viewModel;
+    private Spinner spinnerMode;
 
     private DatabaseHelper dbHelper;
     /**
@@ -80,11 +80,10 @@ public class WeightHistoryActivity extends AppCompatActivity {
         FloatingActionButton fabAdd = findViewById(R.id.fabAddWeight);
         Button btnProfile = findViewById(R.id.btnProfile);
         Button btnAnalytics = findViewById(R.id.btnAnalytics);
-        TextInputLayout searchLayout = findViewById(R.id.searchLayout);
         EditText etSearch = findViewById(R.id.etSearch);
         Button btnDateRange = findViewById(R.id.btnDateRange);
         Button btnClearFilter = findViewById(R.id.btnClearFilter);
-        Spinner spinnerMode = findViewById(R.id.spinnerMode);
+        spinnerMode = findViewById(R.id.spinnerMode);
         Button btnExport = findViewById(R.id.btnExport);
         Button btnImport = findViewById(R.id.btnImport);
         TextView tvHeaderDate = findViewById(R.id.tvHeaderDate);
@@ -158,7 +157,7 @@ public class WeightHistoryActivity extends AppCompatActivity {
             public void onNothingSelected(AdapterView<?> parent) { }
         });
 
-        // Search debounce
+        // Search debounce — reset spinner to mode 0 when searching
         final android.os.Handler searchHandler = new android.os.Handler(android.os.Looper.getMainLooper());
         final Runnable[] searchRunnable = new Runnable[1];
         etSearch.addTextChangedListener(new TextWatcher() {
@@ -166,12 +165,17 @@ public class WeightHistoryActivity extends AppCompatActivity {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
                 if (searchRunnable[0] != null) searchHandler.removeCallbacks(searchRunnable[0]);
-                searchRunnable[0] = () -> viewModel.searchNotes(s.toString().trim());
+                searchRunnable[0] = () -> {
+                    if (spinnerMode.getSelectedItemPosition() != 0) {
+                        spinnerMode.setSelection(0);
+                    }
+                    viewModel.searchNotes(s.toString().trim());
+                };
                 searchHandler.postDelayed(searchRunnable[0], 300);
             }
         });
 
-        // Date range picker
+        // Date range picker — reset spinner to mode 0 when filtering
         btnDateRange.setOnClickListener(v -> {
             MaterialDatePicker<Pair<Long, Long>> picker = MaterialDatePicker.Builder.dateRangePicker().build();
             picker.show(getSupportFragmentManager(), "date_range_picker");
@@ -179,6 +183,9 @@ public class WeightHistoryActivity extends AppCompatActivity {
                 Long start = selection.first;
                 Long end = selection.second;
                 if (start != null && end != null) {
+                    if (spinnerMode.getSelectedItemPosition() != 0) {
+                        spinnerMode.setSelection(0);
+                    }
                     viewModel.loadWeightsInRange(formatMillisToDate(start), formatMillisToDate(end));
                 }
             });
@@ -245,6 +252,7 @@ public class WeightHistoryActivity extends AppCompatActivity {
 
         btnExport.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("text/csv");
             intent.putExtra(Intent.EXTRA_TITLE, "weights_export.csv");
             exportLauncher.launch(intent);
@@ -252,7 +260,8 @@ public class WeightHistoryActivity extends AppCompatActivity {
 
         btnImport.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            intent.setType("text/*");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("text/csv");
             importLauncher.launch(intent);
         });
     }
@@ -265,12 +274,16 @@ public class WeightHistoryActivity extends AppCompatActivity {
     }
 
     /**
-     * Ensures the latest weights are loaded when returning to this
-     * Activity (e.g., after Add/Edit operations).
+     * Ensures the latest data is loaded when returning to this
+     * Activity (e.g., after Add/Edit operations), respecting the
+     * currently selected display mode.
      */
     @Override
     protected void onResume() {
         super.onResume();
-        if (viewModel != null) viewModel.loadWeights();
+        if (viewModel != null) {
+            Integer mode = viewModel.getDisplayMode().getValue();
+            viewModel.setDisplayMode(mode != null ? mode : 0);
+        }
     }
 }
