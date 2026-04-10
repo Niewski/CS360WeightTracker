@@ -55,4 +55,5 @@ public class EditWeightViewModel extends ViewModel {
             updateResult.setValue(false);
         }
     }
+
 }

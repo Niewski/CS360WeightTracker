@@ -34,7 +34,7 @@ public class EditWeightViewModelTest {
     public void updateWeight_validInput_returnsTrue() {
         fakeRepo.updateWeightReturn = true;
 
-        viewModel.updateWeight("2026-01-15", "165.5");
+        viewModel.updateWeight("2026-01-15", "165.5", "");
 
         assertTrue(viewModel.getUpdateResult().getValue());
     }
@@ -43,7 +43,7 @@ public class EditWeightViewModelTest {
     public void updateWeight_validInput_delegatesToRepository() {
         fakeRepo.updateWeightReturn = true;
 
-        viewModel.updateWeight("2026-01-15", "165.5");
+        viewModel.updateWeight("2026-01-15", "165.5", "");
 
         assertTrue(fakeRepo.updateWeightCalled);
     }
@@ -52,28 +52,28 @@ public class EditWeightViewModelTest {
 
     @Test
     public void updateWeight_emptyDate_returnsFalse() {
-        viewModel.updateWeight("", "165.5");
+        viewModel.updateWeight("", "165.5", "");
 
         assertFalse(viewModel.getUpdateResult().getValue());
     }
 
     @Test
     public void updateWeight_emptyWeight_returnsFalse() {
-        viewModel.updateWeight("2026-01-15", "");
+        viewModel.updateWeight("2026-01-15", "", "");
 
         assertFalse(viewModel.getUpdateResult().getValue());
     }
 
     @Test
     public void updateWeight_bothEmpty_returnsFalse() {
-        viewModel.updateWeight("", "");
+        viewModel.updateWeight("", "", "");
 
         assertFalse(viewModel.getUpdateResult().getValue());
     }
 
     @Test
     public void updateWeight_invalidNumber_returnsFalse() {
-        viewModel.updateWeight("2026-01-15", "abc");
+        viewModel.updateWeight("2026-01-15", "abc", "");
 
         assertFalse(viewModel.getUpdateResult().getValue());
     }
@@ -82,7 +82,7 @@ public class EditWeightViewModelTest {
     public void updateWeight_repositoryFails_returnsFalse() {
         fakeRepo.updateWeightReturn = false;
 
-        viewModel.updateWeight("2026-01-15", "165.5");
+        viewModel.updateWeight("2026-01-15", "165.5", "");
 
         assertFalse(viewModel.getUpdateResult().getValue());
     }
@@ -93,7 +93,7 @@ public class EditWeightViewModelTest {
     public void updateWeight_zeroWeight_returnsTrue() {
         fakeRepo.updateWeightReturn = true;
 
-        viewModel.updateWeight("2026-01-15", "0.0");
+        viewModel.updateWeight("2026-01-15", "0.0", "");
 
         assertTrue(viewModel.getUpdateResult().getValue());
     }
@@ -103,7 +103,7 @@ public class EditWeightViewModelTest {
         // ViewModel doesn't validate negative values — repository decides
         fakeRepo.updateWeightReturn = true;
 
-        viewModel.updateWeight("2026-01-15", "-5.0");
+        viewModel.updateWeight("2026-01-15", "-5.0", "");
 
         assertTrue(viewModel.getUpdateResult().getValue());
     }
@@ -122,7 +122,7 @@ public class EditWeightViewModelTest {
 
         // Should still use the first repo (updateWeightReturn = true by default)
         fakeRepo.updateWeightReturn = true;
-        viewModel.updateWeight("2026-01-15", "165.5");
+        viewModel.updateWeight("2026-01-15", "165.5", "");
         assertTrue(viewModel.getUpdateResult().getValue());
     }
 
@@ -137,7 +137,7 @@ public class EditWeightViewModelTest {
         }
 
         @Override
-        public boolean updateWeight(int weightId, String date, double weight) {
+        public boolean updateWeight(int weightId, String date, double weight, String notes) {
             updateWeightCalled = true;
             return updateWeightReturn;
         }
