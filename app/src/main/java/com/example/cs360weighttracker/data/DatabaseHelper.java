@@ -27,7 +27,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private void createFts5Table(SQLiteDatabase db) {
         try {
             db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS weights_fts USING fts5("
-                + "notes, content=" + TABLE_WEIGHTS + ", content_rowid=id)");
+                + "notes, content='" + TABLE_WEIGHTS + "', content_rowid='id')");
         } catch (Exception e) {
             Log.w(TAG, "FTS5 module not available, full-text search disabled", e);
             fts5Available = false;
