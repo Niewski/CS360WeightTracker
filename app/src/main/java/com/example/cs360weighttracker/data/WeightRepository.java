@@ -115,8 +115,13 @@ public class WeightRepository {
     // ── Aggregation operations ──────────────────────────────────────────
 
     /**
-     * Returns average weight per ISO week ({@code YYYY-Www}) for the user,
-     * ordered most recent week first.
+     * Returns average weight per week for the user, ordered most recent
+     * week first.
+     *
+     * <p>The returned period string uses the database query's
+     * {@code %Y-W%W} formatting semantics (week-of-year starting on Monday),
+     * not ISO week numbering, so boundary dates may appear in week
+     * {@code 00}.</p>
      *
      * @param userId the logged-in user's row ID
      * @return list of {@link TimePeriodAverage} with period, average, and
