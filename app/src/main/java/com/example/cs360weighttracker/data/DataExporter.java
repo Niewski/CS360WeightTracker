@@ -7,7 +7,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.Locale;
 
 public class DataExporter {
 
@@ -26,14 +25,20 @@ public class DataExporter {
                     String notes = cursor.getString(cursor.getColumnIndexOrThrow("notes"));
                     if (notes == null) notes = "";
 
+                    // Sanitize newlines so each CSV record stays on one line
+                    String sanitizedNotes = notes.replace("\r\n", " ")
+                                                 .replace("\n", " ")
+                                                 .replace("\r", " ");
+
                     // Escape quotes by doubling and wrap field in quotes when necessary
-                    String escapedNotes = notes.replace("\"", "\"\"");
-                    boolean needsQuotes = escapedNotes.contains(",") || escapedNotes.contains("\n") || escapedNotes.contains("\r") || escapedNotes.contains("\"");
+                    String escapedNotes = sanitizedNotes.replace("\"", "\"\"");
+                    boolean needsQuotes = escapedNotes.contains(",") || escapedNotes.contains("\"");
                     if (needsQuotes) {
                         escapedNotes = "\"" + escapedNotes + "\"";
                     }
 
-                    String line = String.format(Locale.US, "%s,%.1f,%s", date, weight, escapedNotes);
+                    // Use Double.toString to preserve full precision
+                    String line = date + "," + Double.toString(weight) + "," + escapedNotes;
                     writer.println(line);
                 }
                 cursor.close();
