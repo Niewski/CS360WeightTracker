@@ -43,7 +43,7 @@
                 android:id="@+id/btnDelete"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:contentDescription="Delete"
+                android:contentDescription="@string/delete_button"
                 android:src="@android:drawable/ic_menu_delete"
                 android:background="?attr/selectableItemBackgroundBorderless"/>
         </LinearLayout>
