@@ -35,6 +35,7 @@ dependencies {
     implementation libs.lifecycle.viewmodel
     implementation libs.lifecycle.livedata
     implementation libs.constraintlayout
+    implementation libs.bcrypt
     testImplementation libs.junit
     testImplementation libs.arch.core.testing
     androidTestImplementation libs.ext.junit
