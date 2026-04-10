@@ -2,6 +2,8 @@ package com.example.cs360weighttracker.data;
 
 import android.database.Cursor;
 
+import androidx.annotation.NonNull;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -26,16 +28,7 @@ public class DataExporter {
                     if (notes == null) notes = "";
 
                     // Sanitize newlines so each CSV record stays on one line
-                    String sanitizedNotes = notes.replace("\r\n", " ")
-                                                 .replace("\n", " ")
-                                                 .replace("\r", " ");
-
-                    // Escape quotes by doubling and wrap field in quotes when necessary
-                    String escapedNotes = sanitizedNotes.replace("\"", "\"\"");
-                    boolean needsQuotes = escapedNotes.contains(",") || escapedNotes.contains("\"");
-                    if (needsQuotes) {
-                        escapedNotes = "\"" + escapedNotes + "\"";
-                    }
+                    String escapedNotes = getEscapedNotes(notes);
 
                     // Use Double.toString to preserve full precision
                     String line = date + "," + Double.toString(weight) + "," + escapedNotes;
@@ -45,5 +38,20 @@ public class DataExporter {
             }
             writer.flush();
         }
+    }
+
+    @NonNull
+    private static String getEscapedNotes(String notes) {
+        String sanitizedNotes = notes.replace("\r\n", " ")
+                                     .replace("\n", " ")
+                                     .replace("\r", " ");
+
+        // Escape quotes by doubling and wrap field in quotes when necessary
+        String escapedNotes = sanitizedNotes.replace("\"", "\"\"");
+        boolean needsQuotes = escapedNotes.contains(",") || escapedNotes.contains("\"");
+        if (needsQuotes) {
+            escapedNotes = "\"" + escapedNotes + "\"";
+        }
+        return escapedNotes;
     }
 }

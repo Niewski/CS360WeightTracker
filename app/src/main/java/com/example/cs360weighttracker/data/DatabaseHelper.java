@@ -24,6 +24,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
+    @Override
+    public void onOpen(SQLiteDatabase db) {
+        super.onOpen(db);
+        // Verify the FTS5 table actually exists — the instance field defaults to true,
+        // but onCreate/onUpgrade won't run when the DB is already at the current version.
+        try (Cursor c = db.rawQuery(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='weights_fts'", null)) {
+            fts5Available = c.moveToFirst();
+        }
+    }
+
     private void createFts5Table(SQLiteDatabase db) {
         try {
             db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS weights_fts USING fts5("
