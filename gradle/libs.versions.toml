@@ -5,6 +5,7 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 appcompat = "1.6.1"
 bcrypt = "0.10.2"
+sqliteBundled = "2.6.2"
 material = "1.10.0"
 lifecycle = "2.7.0"
 constraintlayout = "2.1.4"
@@ -15,6 +16,7 @@ ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitV
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 bcrypt = { group = "at.favre.lib", name = "bcrypt", version.ref = "bcrypt" }
+sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqliteBundled" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
 lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle" }
