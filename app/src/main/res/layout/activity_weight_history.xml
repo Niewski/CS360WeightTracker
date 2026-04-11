@@ -6,6 +6,7 @@
     android:id="@+id/history_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     tools:context=".features.weight.WeightHistoryActivity">
 
     <!-- Page Title -->
@@ -68,63 +69,69 @@
             android:text="@string/profile_title"/>
     </LinearLayout>
 
-    <!-- Filter Row -->
-    <LinearLayout
-        android:id="@+id/filterRow"
+    <!-- Filter Row (scrollable for smaller screens) -->
+    <HorizontalScrollView
+        android:id="@+id/filterScrollView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:scrollbars="none"
         app:layout_constraintTop_toBottomOf="@id/navRow"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="8dp">
 
-        <Button
-            android:id="@+id/btnDateRange"
+        <LinearLayout
+            android:id="@+id/filterRow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/date_range_button"/>
+            android:orientation="horizontal">
 
-        <View
-            android:layout_width="8dp"
-            android:layout_height="1dp"/>
+            <Button
+                android:id="@+id/btnDateRange"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/date_range_button"/>
 
-        <Button
-            android:id="@+id/btnClearFilter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/clear_filter_button"/>
+            <View
+                android:layout_width="8dp"
+                android:layout_height="1dp"/>
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1"/>
+            <Button
+                android:id="@+id/btnClearFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/clear_filter_button"/>
 
-        <Spinner
-            android:id="@+id/spinnerMode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            <View
+                android:layout_width="8dp"
+                android:layout_height="1dp"/>
 
-        <View
-            android:layout_width="8dp"
-            android:layout_height="1dp"/>
+            <Spinner
+                android:id="@+id/spinnerMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
 
-        <Button
-            android:id="@+id/btnExport"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/export_button"/>
+            <View
+                android:layout_width="8dp"
+                android:layout_height="1dp"/>
 
-        <View
-            android:layout_width="8dp"
-            android:layout_height="1dp"/>
+            <Button
+                android:id="@+id/btnExport"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/export_button"/>
 
-        <Button
-            android:id="@+id/btnImport"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/import_button"/>
-    </LinearLayout>
+            <View
+                android:layout_width="8dp"
+                android:layout_height="1dp"/>
+
+            <Button
+                android:id="@+id/btnImport"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/import_button"/>
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <!-- Header Row -->
     <LinearLayout
@@ -134,7 +141,7 @@
         android:orientation="horizontal"
         android:padding="12dp"
         android:background="#EEEEEE"
-        app:layout_constraintTop_toBottomOf="@id/filterRow"
+        app:layout_constraintTop_toBottomOf="@id/filterScrollView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="8dp">
