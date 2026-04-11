@@ -452,24 +452,62 @@ public class DatabaseHelper implements Closeable {
 
     public List<WeightEntry> searchWeightNotes(int userId, String query) {
         List<WeightEntry> list = new ArrayList<>();
-        SQLiteStatement stmt = connection.prepare(
-            "SELECT w.id, w.date, w.weight, w.notes FROM " + TABLE_WEIGHTS + " w "
-                + "JOIN weights_fts f ON f.rowid = w.id "
-                + "WHERE f.notes MATCH ? AND w.userId=? ORDER BY w.date DESC");
+        if (query == null || query.trim().isEmpty()) {
+            return list;
+        }
+
+        SQLiteStatement stmt = null;
         try {
+            stmt = connection.prepare(
+                "SELECT w.id, w.date, w.weight, w.notes FROM " + TABLE_WEIGHTS + " w "
+                    + "JOIN weights_fts f ON f.rowid = w.id "
+                    + "WHERE f.notes MATCH ? AND w.userId=? ORDER BY w.date DESC");
             stmt.bindText(1, query);
             stmt.bindLong(2, userId);
             while (stmt.step()) {
-                int id = (int) stmt.getLong(0);
-                String date = stmt.getText(1);
-                double weight = stmt.getDouble(2);
-                String notes = stmt.isNull(3) ? "" : stmt.getText(3);
-                list.add(new WeightEntry(id, date, weight, notes));
+                addWeightEntryFromStatement(list, stmt);
+            }
+            return list;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "FTS search failed, falling back to LIKE search", e);
+            return searchWeightNotesFallback(userId, query);
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+        }
+    }
+
+    private List<WeightEntry> searchWeightNotesFallback(int userId, String query) {
+        List<WeightEntry> list = new ArrayList<>();
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT id, date, weight, notes FROM " + TABLE_WEIGHTS
+                + " WHERE userId=? AND notes LIKE ? ESCAPE '\\' ORDER BY date DESC");
+        try {
+            stmt.bindLong(1, userId);
+            stmt.bindText(2, "%" + escapeLikePattern(query.trim()) + "%");
+            while (stmt.step()) {
+                addWeightEntryFromStatement(list, stmt);
             }
         } finally {
             stmt.close();
         }
         return list;
+    }
+
+    private void addWeightEntryFromStatement(List<WeightEntry> list, SQLiteStatement stmt) {
+        int id = (int) stmt.getLong(0);
+        String date = stmt.getText(1);
+        double weight = stmt.getDouble(2);
+        String notes = stmt.isNull(3) ? "" : stmt.getText(3);
+        list.add(new WeightEntry(id, date, weight, notes));
+    }
+
+    private String escapeLikePattern(String value) {
+        return value
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_");
     }
 
     public List<TimePeriodAverage> getWeeklyAverages(int userId) {
