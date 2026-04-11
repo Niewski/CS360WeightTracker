@@ -39,12 +39,29 @@ public class DatabaseHelper implements Closeable {
     private void initializeDatabase() {
         execSQL("PRAGMA journal_mode=WAL");
         int currentVersion = getSchemaVersion();
-        if (currentVersion == 0) {
-            onCreate();
-        } else if (currentVersion < DATABASE_VERSION) {
-            onUpgrade(currentVersion, DATABASE_VERSION);
+
+        if (currentVersion > DATABASE_VERSION) {
+            throw new IllegalStateException(
+                "Database version " + currentVersion + " is newer than supported version " + DATABASE_VERSION);
         }
-        setSchemaVersion(DATABASE_VERSION);
+
+        if (currentVersion == DATABASE_VERSION) {
+            return;
+        }
+
+        execSQL("BEGIN TRANSACTION");
+        boolean success = false;
+        try {
+            if (currentVersion == 0) {
+                onCreate();
+            } else {
+                onUpgrade(currentVersion, DATABASE_VERSION);
+            }
+            setSchemaVersion(DATABASE_VERSION);
+            success = true;
+        } finally {
+            execSQL(success ? "COMMIT" : "ROLLBACK");
+        }
     }
 
     private void execSQL(String sql) {
