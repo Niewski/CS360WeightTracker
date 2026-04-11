@@ -1,7 +1,6 @@
 package com.example.cs360weighttracker.features.login;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
@@ -10,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.TestDatabaseHelper;
 
 import org.junit.After;
 import org.junit.Before;
@@ -30,22 +30,26 @@ import static org.junit.Assert.assertTrue;
 @RunWith(AndroidJUnit4.class)
 public class CreateAccountActivityTest {
 
-    private DatabaseHelper dbHelper;
+        private TestDatabaseHelper dbHelper;
 
     @Before
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        dbHelper = new DatabaseHelper(context);
+        dbHelper = new TestDatabaseHelper(context);
         // Clean up any leftovers from previous test runs
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("users", "username=?", new String[]{"testuser"});
+        dbHelper.testDeleteUserByUsername("testuser");
     }
 
     @After
-    public void tearDown() {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("users", "username=?", new String[]{"testuser"});
-    }
+        public void tearDown() {
+                if (dbHelper != null) {
+                        try {
+                                dbHelper.testDeleteUserByUsername("testuser");
+                        } finally {
+                                dbHelper.close();
+                        }
+                }
+        }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {
         Thread.sleep(1000);

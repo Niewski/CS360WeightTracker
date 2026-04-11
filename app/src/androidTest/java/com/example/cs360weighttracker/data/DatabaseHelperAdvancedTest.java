@@ -1,7 +1,6 @@
 package com.example.cs360weighttracker.data;
 
 import android.content.Context;
-import android.database.Cursor;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -10,6 +9,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -51,21 +52,17 @@ public class DatabaseHelperAdvancedTest {
     @Test
     public void addWeight_withNotes_notesRetrievable() {
         dbHelper.addWeight(userId, "2026-01-15", 165.5, "Morning weigh-in");
-        Cursor cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        String notes = cursor.getString(cursor.getColumnIndexOrThrow("notes"));
-        assertEquals("Morning weigh-in", notes);
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        assertEquals("Morning weigh-in", weights.get(0).notes);
     }
 
     @Test
     public void addWeight_withoutNotes_defaultsToEmpty() {
         dbHelper.addWeight(userId, "2026-01-15", 165.5);
-        Cursor cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        String notes = cursor.getString(cursor.getColumnIndexOrThrow("notes"));
-        assertEquals("", notes);
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        assertEquals("", weights.get(0).notes);
     }
 
     // --- updateWeightNotes ---
@@ -73,17 +70,15 @@ public class DatabaseHelperAdvancedTest {
     @Test
     public void updateWeightNotes_existingEntry_returnsTrue() {
         dbHelper.addWeight(userId, "2026-01-15", 165.5, "");
-        Cursor cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        int weightId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        int weightId = weights.get(0).id;
 
         assertTrue(dbHelper.updateWeightNotes(weightId, "Updated notes"));
 
-        cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        assertEquals("Updated notes", cursor.getString(cursor.getColumnIndexOrThrow("notes")));
-        cursor.close();
+        weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        assertEquals("Updated notes", weights.get(0).notes);
     }
 
     // --- updateWeight with notes ---
@@ -91,36 +86,32 @@ public class DatabaseHelperAdvancedTest {
     @Test
     public void updateWeight_withNotes_updatesAllFields() {
         dbHelper.addWeight(userId, "2026-01-15", 165.5, "Original");
-        Cursor cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        int weightId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        int weightId = weights.get(0).id;
 
         assertTrue(dbHelper.updateWeight(weightId, "2026-01-16", 164.0, "Edited"));
 
-        cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        assertEquals("2026-01-16", cursor.getString(cursor.getColumnIndexOrThrow("date")));
-        assertEquals(164.0, cursor.getDouble(cursor.getColumnIndexOrThrow("weight")), 0.01);
-        assertEquals("Edited", cursor.getString(cursor.getColumnIndexOrThrow("notes")));
-        cursor.close();
+        weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        assertEquals("2026-01-16", weights.get(0).date);
+        assertEquals(164.0, weights.get(0).weight, 0.01);
+        assertEquals("Edited", weights.get(0).notes);
     }
 
     @Test
     public void updateWeight_withoutNotes_preservesExistingNotes() {
         dbHelper.addWeight(userId, "2026-01-15", 165.5, "Keep me");
-        Cursor cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        int weightId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        int weightId = weights.get(0).id;
 
         // Use the 3-param updateWeight (no notes parameter)
         assertTrue(dbHelper.updateWeight(weightId, "2026-01-16", 164.0));
 
-        cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        assertEquals("Keep me", cursor.getString(cursor.getColumnIndexOrThrow("notes")));
-        cursor.close();
+        weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        assertEquals("Keep me", weights.get(0).notes);
     }
 
     // --- getWeightsInRange ---
@@ -131,18 +122,16 @@ public class DatabaseHelperAdvancedTest {
         dbHelper.addWeight(userId, "2026-01-15", 165.0);
         dbHelper.addWeight(userId, "2026-02-01", 160.0);
 
-        Cursor cursor = dbHelper.getWeightsInRange(userId, "2026-01-01", "2026-01-31");
-        assertEquals(2, cursor.getCount());
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeightsInRange(userId, "2026-01-01", "2026-01-31");
+        assertEquals(2, weights.size());
     }
 
     @Test
     public void getWeightsInRange_noMatches_returnsEmpty() {
         dbHelper.addWeight(userId, "2026-01-15", 165.0);
 
-        Cursor cursor = dbHelper.getWeightsInRange(userId, "2026-03-01", "2026-03-31");
-        assertEquals(0, cursor.getCount());
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeightsInRange(userId, "2026-03-01", "2026-03-31");
+        assertEquals(0, weights.size());
     }
 
     @Test
@@ -150,9 +139,8 @@ public class DatabaseHelperAdvancedTest {
         dbHelper.addWeight(userId, "2026-01-01", 170.0);
         dbHelper.addWeight(userId, "2026-01-31", 165.0);
 
-        Cursor cursor = dbHelper.getWeightsInRange(userId, "2026-01-01", "2026-01-31");
-        assertEquals(2, cursor.getCount());
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeightsInRange(userId, "2026-01-01", "2026-01-31");
+        assertEquals(2, weights.size());
     }
 
     // --- FTS5 Search ---
@@ -162,18 +150,16 @@ public class DatabaseHelperAdvancedTest {
         dbHelper.addWeight(userId, "2026-01-15", 165.5, "Morning weigh-in");
         dbHelper.addWeight(userId, "2026-01-16", 164.0, "After workout");
 
-        Cursor cursor = dbHelper.searchWeightNotes(userId, "morning");
-        assertEquals(1, cursor.getCount());
-        cursor.close();
+        List<WeightEntry> results = dbHelper.searchWeightNotes(userId, "morning");
+        assertEquals(1, results.size());
     }
 
     @Test
     public void searchWeightNotes_noMatch_returnsEmpty() {
         dbHelper.addWeight(userId, "2026-01-15", 165.5, "Morning weigh-in");
 
-        Cursor cursor = dbHelper.searchWeightNotes(userId, "evening");
-        assertEquals(0, cursor.getCount());
-        cursor.close();
+        List<WeightEntry> results = dbHelper.searchWeightNotes(userId, "evening");
+        assertEquals(0, results.size());
     }
 
     @Test
@@ -181,44 +167,38 @@ public class DatabaseHelperAdvancedTest {
         dbHelper.addWeight(userId, "2026-01-15", 165.5, "");
         dbHelper.addWeight(userId, "2026-01-16", 164.0, "Has notes");
 
-        Cursor cursor = dbHelper.searchWeightNotes(userId, "notes");
-        assertEquals(1, cursor.getCount());
-        cursor.close();
+        List<WeightEntry> results = dbHelper.searchWeightNotes(userId, "notes");
+        assertEquals(1, results.size());
     }
 
     @Test
     public void fts5Sync_afterDelete_removedFromSearch() {
         dbHelper.addWeight(userId, "2026-01-15", 165.5, "Delete me test");
-        Cursor cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        int weightId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        int weightId = weights.get(0).id;
 
         dbHelper.deleteWeight(weightId);
 
-        cursor = dbHelper.searchWeightNotes(userId, "Delete me test");
-        assertEquals(0, cursor.getCount());
-        cursor.close();
+        List<WeightEntry> results = dbHelper.searchWeightNotes(userId, "Delete me test");
+        assertEquals(0, results.size());
     }
 
     @Test
     public void fts5Sync_afterUpdate_searchFindsNewText() {
         dbHelper.addWeight(userId, "2026-01-15", 165.5, "Original note");
-        Cursor cursor = dbHelper.getWeights(userId);
-        assertTrue(cursor.moveToFirst());
-        int weightId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-        cursor.close();
+        List<WeightEntry> weights = dbHelper.getWeights(userId);
+        assertFalse(weights.isEmpty());
+        int weightId = weights.get(0).id;
 
         dbHelper.updateWeightNotes(weightId, "Completely different text");
 
-        cursor = dbHelper.searchWeightNotes(userId, "different");
-        assertEquals(1, cursor.getCount());
-        cursor.close();
+        List<WeightEntry> results = dbHelper.searchWeightNotes(userId, "different");
+        assertEquals(1, results.size());
 
         // Old text no longer matches
-        cursor = dbHelper.searchWeightNotes(userId, "Original");
-        assertEquals(0, cursor.getCount());
-        cursor.close();
+        results = dbHelper.searchWeightNotes(userId, "Original");
+        assertEquals(0, results.size());
     }
 
     // --- Weekly Averages ---
@@ -229,9 +209,8 @@ public class DatabaseHelperAdvancedTest {
         dbHelper.addWeight(userId, "2026-01-07", 168.0);
         dbHelper.addWeight(userId, "2026-01-13", 165.0);
 
-        Cursor cursor = dbHelper.getWeeklyAverages(userId);
-        assertTrue(cursor.getCount() >= 2);
-        cursor.close();
+        List<TimePeriodAverage> averages = dbHelper.getWeeklyAverages(userId);
+        assertTrue(averages.size() >= 2);
     }
 
     @Test
@@ -239,11 +218,9 @@ public class DatabaseHelperAdvancedTest {
         dbHelper.addWeight(userId, "2026-01-06", 170.0);
         dbHelper.addWeight(userId, "2026-01-07", 168.0);
 
-        Cursor cursor = dbHelper.getWeeklyAverages(userId);
-        assertTrue(cursor.moveToFirst());
-        double avg = cursor.getDouble(cursor.getColumnIndexOrThrow("avg_weight"));
-        assertEquals(169.0, avg, 0.01);
-        cursor.close();
+        List<TimePeriodAverage> averages = dbHelper.getWeeklyAverages(userId);
+        assertFalse(averages.isEmpty());
+        assertEquals(169.0, averages.get(0).average, 0.01);
     }
 
     // --- Monthly Averages ---
@@ -254,9 +231,8 @@ public class DatabaseHelperAdvancedTest {
         dbHelper.addWeight(userId, "2026-01-20", 168.0);
         dbHelper.addWeight(userId, "2026-02-10", 165.0);
 
-        Cursor cursor = dbHelper.getMonthlyAverages(userId);
-        assertEquals(2, cursor.getCount());
-        cursor.close();
+        List<TimePeriodAverage> averages = dbHelper.getMonthlyAverages(userId);
+        assertEquals(2, averages.size());
     }
 
     @Test
@@ -264,17 +240,14 @@ public class DatabaseHelperAdvancedTest {
         dbHelper.addWeight(userId, "2026-01-15", 170.0);
         dbHelper.addWeight(userId, "2026-01-20", 166.0);
 
-        Cursor cursor = dbHelper.getMonthlyAverages(userId);
-        assertTrue(cursor.moveToFirst());
-        double avg = cursor.getDouble(cursor.getColumnIndexOrThrow("avg_weight"));
-        assertEquals(168.0, avg, 0.01);
-        cursor.close();
+        List<TimePeriodAverage> averages = dbHelper.getMonthlyAverages(userId);
+        assertFalse(averages.isEmpty());
+        assertEquals(168.0, averages.get(0).average, 0.01);
     }
 
     @Test
     public void getMonthlyAverages_noEntries_returnsEmpty() {
-        Cursor cursor = dbHelper.getMonthlyAverages(userId);
-        assertEquals(0, cursor.getCount());
-        cursor.close();
+        List<TimePeriodAverage> averages = dbHelper.getMonthlyAverages(userId);
+        assertEquals(0, averages.size());
     }
 }
