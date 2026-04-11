@@ -1,9 +1,6 @@
 package com.example.cs360weighttracker.data;
 
-import android.content.ContentValues;
 import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -40,13 +37,9 @@ public class PasswordHashingTest {
     public void createUser_passwordStoredAsHash_notPlainText() {
         dbHelper.createUser("testuser", "mySecret123", 150.0, null);
 
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT password FROM users WHERE username=?",
-                new String[]{"testuser"});
-        assertTrue(cursor.moveToFirst());
-        String storedPassword = cursor.getString(cursor.getColumnIndexOrThrow("password"));
-        cursor.close();
+        String storedPassword = dbHelper.getStoredPasswordHash("testuser");
 
+        assertNotNull(storedPassword);
         assertNotEquals("Password must not be stored as plain text",
                 "mySecret123", storedPassword);
         assertTrue("Stored password should be a bcrypt hash",
@@ -58,19 +51,11 @@ public class PasswordHashingTest {
         dbHelper.createUser("user1", "samePassword", 150.0, null);
         dbHelper.createUser("user2", "samePassword", 150.0, null);
 
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor1 = db.rawQuery("SELECT password FROM users WHERE username=?",
-                new String[]{"user1"});
-        assertTrue(cursor1.moveToFirst());
-        String hash1 = cursor1.getString(cursor1.getColumnIndexOrThrow("password"));
-        cursor1.close();
+        String hash1 = dbHelper.getStoredPasswordHash("user1");
+        String hash2 = dbHelper.getStoredPasswordHash("user2");
 
-        Cursor cursor2 = db.rawQuery("SELECT password FROM users WHERE username=?",
-                new String[]{"user2"});
-        assertTrue(cursor2.moveToFirst());
-        String hash2 = cursor2.getString(cursor2.getColumnIndexOrThrow("password"));
-        cursor2.close();
-
+        assertNotNull(hash1);
+        assertNotNull(hash2);
         assertNotEquals("Same password should produce different hashes due to random salt",
                 hash1, hash2);
     }
@@ -133,23 +118,15 @@ public class PasswordHashingTest {
     @Test
     public void loginUser_legacyPlainTextPassword_authenticatesAndUpgrades() {
         // Simulate a pre-v6 user with plain-text password
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("username", "legacyuser");
-        values.put("password", "plainpass");
-        values.put("goal_weight", 150.0);
-        db.insert("users", null, values);
+        dbHelper.insertRawUser("legacyuser", "plainpass", 150.0);
 
         // Login should succeed via legacy fallback
         int userId = dbHelper.loginUser("legacyuser", "plainpass");
         assertTrue("Legacy plain-text login should succeed", userId > 0);
 
         // Password should now be upgraded to bcrypt
-        Cursor cursor = db.rawQuery("SELECT password FROM users WHERE username=?",
-                new String[]{"legacyuser"});
-        assertTrue(cursor.moveToFirst());
-        String storedPassword = cursor.getString(cursor.getColumnIndexOrThrow("password"));
-        cursor.close();
+        String storedPassword = dbHelper.getStoredPasswordHash("legacyuser");
+        assertNotNull(storedPassword);
         assertTrue("Password should be upgraded to bcrypt hash",
                 storedPassword.startsWith("$2a$"));
 
@@ -161,12 +138,7 @@ public class PasswordHashingTest {
     @Test
     public void loginUser_legacyPlainTextPassword_wrongPasswordFails() {
         // Simulate a pre-v6 user with plain-text password
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("username", "legacyuser");
-        values.put("password", "plainpass");
-        values.put("goal_weight", 150.0);
-        db.insert("users", null, values);
+        dbHelper.insertRawUser("legacyuser", "plainpass", 150.0);
 
         int userId = dbHelper.loginUser("legacyuser", "wrongpass");
         assertEquals("Wrong password should fail for legacy user", -1, userId);
@@ -175,12 +147,7 @@ public class PasswordHashingTest {
     @Test
     public void loginUser_corruptedHash_returnsNegativeOne() {
         // Simulate a corrupted hash in the database
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("username", "corruptuser");
-        values.put("password", "$2a$12$corrupted_not_valid_hash");
-        values.put("goal_weight", 150.0);
-        db.insert("users", null, values);
+        dbHelper.insertRawUser("corruptuser", "$2a$12$corrupted_not_valid_hash", 150.0);
 
         int userId = dbHelper.loginUser("corruptuser", "anypass");
         assertEquals("Corrupted hash should not crash, should return -1", -1, userId);

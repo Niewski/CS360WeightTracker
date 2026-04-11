@@ -1,7 +1,6 @@
 package com.example.cs360weighttracker.features.login;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
@@ -37,14 +36,12 @@ public class CreateAccountActivityTest {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         dbHelper = new DatabaseHelper(context);
         // Clean up any leftovers from previous test runs
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("users", "username=?", new String[]{"testuser"});
+        dbHelper.deleteUserByUsername("testuser");
     }
 
     @After
     public void tearDown() {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("users", "username=?", new String[]{"testuser"});
+        dbHelper.deleteUserByUsername("testuser");
     }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {

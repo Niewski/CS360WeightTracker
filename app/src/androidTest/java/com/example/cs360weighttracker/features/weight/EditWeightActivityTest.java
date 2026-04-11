@@ -2,8 +2,6 @@ package com.example.cs360weighttracker.features.weight;
 
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
@@ -12,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.WeightEntry;
 
 import org.junit.After;
 import org.junit.Before;
@@ -33,6 +32,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.List;
+
 @RunWith(AndroidJUnit4.class)
 public class EditWeightActivityTest {
 
@@ -48,8 +49,7 @@ public class EditWeightActivityTest {
         dbHelper = new DatabaseHelper(context);
 
         // Clean up leftovers
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("users", "username=?", new String[]{"testuser"});
+        dbHelper.deleteUserByUsername("testuser");
 
         // Create test user and weight entry
         dbHelper.createUser("testuser", "testpass", 150.0, null);
@@ -59,17 +59,15 @@ public class EditWeightActivityTest {
         dbHelper.addWeight(testUserId, TEST_DATE, TEST_WEIGHT);
 
         // Retrieve the weight entry ID
-        Cursor cursor = dbHelper.getWeights(testUserId);
-        assertTrue("Test weight must exist", cursor.moveToFirst());
-        testWeightId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-        cursor.close();
+        List<WeightEntry> entries = dbHelper.getWeights(testUserId);
+        assertTrue("Test weight must exist", !entries.isEmpty());
+        testWeightId = entries.get(0).id;
     }
 
     @After
     public void tearDown() {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("weights", "userId=?", new String[]{String.valueOf(testUserId)});
-        db.delete("users", "id=?", new String[]{String.valueOf(testUserId)});
+        dbHelper.deleteWeightsByUserId(testUserId);
+        dbHelper.deleteUserById(testUserId);
     }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {
@@ -142,11 +140,9 @@ public class EditWeightActivityTest {
             onView(withId(R.id.btnUpdateWeight)).perform(click());
 
             // Verify the weight was updated in the database
-            Cursor cursor = dbHelper.getWeights(testUserId);
-            assertTrue("Weight entry should exist", cursor.moveToFirst());
-            double weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight"));
-            assertEquals(170.0, weight, 0.01);
-            cursor.close();
+            List<WeightEntry> entries = dbHelper.getWeights(testUserId);
+            assertTrue("Weight entry should exist", !entries.isEmpty());
+            assertEquals(170.0, entries.get(0).weight, 0.01);
         }
     }
 
@@ -171,11 +167,9 @@ public class EditWeightActivityTest {
             onView(withId(R.id.btnUpdateWeight)).perform(click());
 
             // Original weight should remain unchanged
-            Cursor cursor = dbHelper.getWeights(testUserId);
-            assertTrue("Weight entry should exist", cursor.moveToFirst());
-            double weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight"));
-            assertEquals(TEST_WEIGHT, weight, 0.01);
-            cursor.close();
+            List<WeightEntry> entries = dbHelper.getWeights(testUserId);
+            assertTrue("Weight entry should exist", !entries.isEmpty());
+            assertEquals(TEST_WEIGHT, entries.get(0).weight, 0.01);
         }
     }
 
@@ -217,11 +211,9 @@ public class EditWeightActivityTest {
             onView(withId(R.id.btnCancel)).perform(click());
 
             // Original weight should remain
-            Cursor cursor = dbHelper.getWeights(testUserId);
-            assertTrue("Weight entry should exist", cursor.moveToFirst());
-            double weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight"));
-            assertEquals(TEST_WEIGHT, weight, 0.01);
-            cursor.close();
+            List<WeightEntry> entries = dbHelper.getWeights(testUserId);
+            assertTrue("Weight entry should exist", !entries.isEmpty());
+            assertEquals(TEST_WEIGHT, entries.get(0).weight, 0.01);
         }
     }
 

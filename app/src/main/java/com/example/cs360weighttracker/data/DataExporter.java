@@ -1,7 +1,5 @@
 package com.example.cs360weighttracker.data;
 
-import android.database.Cursor;
-
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
@@ -9,6 +7,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 public class DataExporter {
 
@@ -19,22 +18,16 @@ public class DataExporter {
             // Header
             writer.println("date,weight,notes");
 
-            Cursor cursor = dbHelper.getWeights(userId);
-            if (cursor != null) {
-                while (cursor.moveToNext()) {
-                    String date = cursor.getString(cursor.getColumnIndexOrThrow("date"));
-                    double weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight"));
-                    String notes = cursor.getString(cursor.getColumnIndexOrThrow("notes"));
-                    if (notes == null) notes = "";
+            List<WeightEntry> entries = dbHelper.getWeights(userId);
+            for (WeightEntry entry : entries) {
+                String notes = entry.notes != null ? entry.notes : "";
 
-                    // Sanitize newlines so each CSV record stays on one line
-                    String escapedNotes = getEscapedNotes(notes);
+                // Sanitize newlines so each CSV record stays on one line
+                String escapedNotes = getEscapedNotes(notes);
 
-                    // Use Double.toString to preserve full precision
-                    String line = date + "," + Double.toString(weight) + "," + escapedNotes;
-                    writer.println(line);
-                }
-                cursor.close();
+                // Use Double.toString to preserve full precision
+                String line = entry.date + "," + Double.toString(entry.weight) + "," + escapedNotes;
+                writer.println(line);
             }
             writer.flush();
         }

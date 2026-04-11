@@ -2,7 +2,6 @@ package com.example.cs360weighttracker.features.profile;
 
 import android.content.Context;
 import android.content.Intent;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
@@ -41,8 +40,7 @@ public class ProfileActivityTest {
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         dbHelper = new DatabaseHelper(context);
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("users", "username=?", new String[]{"testuser"});
+        dbHelper.deleteUserByUsername("testuser");
         dbHelper.createUser("testuser", "testpass", 150.0, "5551234567");
         testUserId = dbHelper.loginUser("testuser", "testpass");
         assertTrue("Test user must be created", testUserId != -1);
@@ -50,9 +48,8 @@ public class ProfileActivityTest {
 
     @After
     public void tearDown() {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("weights", "userId=?", new String[]{String.valueOf(testUserId)});
-        db.delete("users", "id=?", new String[]{String.valueOf(testUserId)});
+        dbHelper.deleteWeightsByUserId(testUserId);
+        dbHelper.deleteUserById(testUserId);
     }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {
