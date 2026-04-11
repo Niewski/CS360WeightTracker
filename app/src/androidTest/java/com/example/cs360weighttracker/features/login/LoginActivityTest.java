@@ -9,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.TestDatabaseHelper;
 
 import org.junit.After;
 import org.junit.Before;
@@ -28,15 +29,15 @@ import static org.junit.Assert.assertNotEquals;
 @RunWith(AndroidJUnit4.class)
 public class LoginActivityTest {
 
-    private DatabaseHelper dbHelper;
+    private TestDatabaseHelper dbHelper;
     private int testUserId;
 
     @Before
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        dbHelper = new DatabaseHelper(context);
+        dbHelper = new TestDatabaseHelper(context);
         // Clean up any leftovers from previous test runs
-        dbHelper.deleteUserByUsername("testuser");
+        dbHelper.testDeleteUserByUsername("testuser");
         // Create test user
         dbHelper.createUser("testuser", "testpass", 150.0, null);
         testUserId = dbHelper.loginUser("testuser", "testpass");
@@ -44,8 +45,14 @@ public class LoginActivityTest {
 
     @After
     public void tearDown() {
-        dbHelper.deleteWeightsByUserId(testUserId);
-        dbHelper.deleteUserById(testUserId);
+        if (dbHelper != null) {
+            try {
+                dbHelper.testDeleteWeightsByUserId(testUserId);
+                dbHelper.testDeleteUserById(testUserId);
+            } finally {
+                dbHelper.close();
+            }
+        }
     }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {

@@ -9,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.TestDatabaseHelper;
 
 import org.junit.After;
 import org.junit.Before;
@@ -29,20 +30,26 @@ import static org.junit.Assert.assertTrue;
 @RunWith(AndroidJUnit4.class)
 public class CreateAccountActivityTest {
 
-    private DatabaseHelper dbHelper;
+        private TestDatabaseHelper dbHelper;
 
     @Before
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        dbHelper = new DatabaseHelper(context);
+        dbHelper = new TestDatabaseHelper(context);
         // Clean up any leftovers from previous test runs
-        dbHelper.deleteUserByUsername("testuser");
+        dbHelper.testDeleteUserByUsername("testuser");
     }
 
     @After
-    public void tearDown() {
-        dbHelper.deleteUserByUsername("testuser");
-    }
+        public void tearDown() {
+                if (dbHelper != null) {
+                        try {
+                                dbHelper.testDeleteUserByUsername("testuser");
+                        } finally {
+                                dbHelper.close();
+                        }
+                }
+        }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {
         Thread.sleep(1000);

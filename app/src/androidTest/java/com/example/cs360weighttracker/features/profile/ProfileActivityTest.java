@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.TestDatabaseHelper;
 
 import org.junit.After;
 import org.junit.Before;
@@ -33,14 +34,14 @@ import static org.junit.Assert.assertTrue;
 @RunWith(AndroidJUnit4.class)
 public class ProfileActivityTest {
 
-    private DatabaseHelper dbHelper;
+    private TestDatabaseHelper dbHelper;
     private int testUserId;
 
     @Before
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        dbHelper = new DatabaseHelper(context);
-        dbHelper.deleteUserByUsername("testuser");
+        dbHelper = new TestDatabaseHelper(context);
+        dbHelper.testDeleteUserByUsername("testuser");
         dbHelper.createUser("testuser", "testpass", 150.0, "5551234567");
         testUserId = dbHelper.loginUser("testuser", "testpass");
         assertTrue("Test user must be created", testUserId != -1);
@@ -48,8 +49,14 @@ public class ProfileActivityTest {
 
     @After
     public void tearDown() {
-        dbHelper.deleteWeightsByUserId(testUserId);
-        dbHelper.deleteUserById(testUserId);
+        if (dbHelper != null) {
+            try {
+                dbHelper.testDeleteWeightsByUserId(testUserId);
+                dbHelper.testDeleteUserById(testUserId);
+            } finally {
+                dbHelper.close();
+            }
+        }
     }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {

@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.TestDatabaseHelper;
 import com.example.cs360weighttracker.data.WeightEntry;
 
 import org.junit.After;
@@ -32,7 +33,7 @@ import java.util.List;
 @RunWith(AndroidJUnit4.class)
 public class WeightHistoryActivityTest {
 
-    private DatabaseHelper dbHelper;
+    private TestDatabaseHelper dbHelper;
     private int testUserId;
     private static final String TEST_DATE = "2026-01-15";
     private static final double TEST_WEIGHT = 165.5;
@@ -40,10 +41,10 @@ public class WeightHistoryActivityTest {
     @Before
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        dbHelper = new DatabaseHelper(context);
+        dbHelper = new TestDatabaseHelper(context);
 
         // Clean up leftovers
-        dbHelper.deleteUserByUsername("testuser");
+        dbHelper.testDeleteUserByUsername("testuser");
 
         // Create test user
         dbHelper.createUser("testuser", "testpass", 150.0, null);
@@ -53,8 +54,14 @@ public class WeightHistoryActivityTest {
 
     @After
     public void tearDown() {
-        dbHelper.deleteWeightsByUserId(testUserId);
-        dbHelper.deleteUserById(testUserId);
+        if (dbHelper != null) {
+            try {
+                dbHelper.testDeleteWeightsByUserId(testUserId);
+                dbHelper.testDeleteUserById(testUserId);
+            } finally {
+                dbHelper.close();
+            }
+        }
     }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {
