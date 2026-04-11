@@ -3,6 +3,8 @@ package com.example.cs360weighttracker.data;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.VisibleForTesting;
+
 import androidx.sqlite.SQLiteConnection;
 import androidx.sqlite.SQLiteStatement;
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver;
@@ -592,11 +594,11 @@ public class DatabaseHelper implements Closeable {
 
     public int bulkAddWeights(int userId, java.util.List<String[]> rows) {
         int imported = 0;
-        execSQL("BEGIN TRANSACTION");
         SQLiteStatement stmt = connection.prepare(
             "INSERT INTO " + TABLE_WEIGHTS
                 + " (userId, date, weight, notes) VALUES (?, ?, ?, ?)");
         try {
+            execSQL("BEGIN TRANSACTION");
             for (String[] row : rows) {
                 // expected: {date, weight, notes}
                 if (row == null || row.length < 2) continue;
@@ -621,11 +623,11 @@ public class DatabaseHelper implements Closeable {
                 }
                 stmt.reset();
             }
-            stmt.close();
             execSQL("COMMIT");
         } catch (Exception e) {
-            stmt.close();
             try { execSQL("ROLLBACK"); } catch (Exception ignored) {}
+        } finally {
+            stmt.close();
         }
         return imported;
     }
@@ -658,8 +660,8 @@ public class DatabaseHelper implements Closeable {
     }
 
     // --- Package-private test helpers ---
-
-    public void deleteUserByUsername(String username) {
+    @VisibleForTesting
+    void deleteUserByUsername(String username) {
         SQLiteStatement stmt = connection.prepare(
             "DELETE FROM " + TABLE_USERS + " WHERE username=?");
         try {
@@ -670,7 +672,8 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
-    public void deleteWeightsByUserId(int userId) {
+    @VisibleForTesting
+    void deleteWeightsByUserId(int userId) {
         SQLiteStatement stmt = connection.prepare(
             "DELETE FROM " + TABLE_WEIGHTS + " WHERE userId=?");
         try {
@@ -681,7 +684,8 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
-    public void deleteUserById(int userId) {
+    @VisibleForTesting
+    void deleteUserById(int userId) {
         SQLiteStatement stmt = connection.prepare(
             "DELETE FROM " + TABLE_USERS + " WHERE id=?");
         try {
@@ -692,6 +696,7 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    @VisibleForTesting
     String getStoredPasswordHash(String username) {
         SQLiteStatement stmt = connection.prepare(
             "SELECT password FROM " + TABLE_USERS + " WHERE username=?");
@@ -706,6 +711,7 @@ public class DatabaseHelper implements Closeable {
         return null;
     }
 
+    @VisibleForTesting
     boolean insertRawUser(String username, String rawPassword, double goalWeight) {
         SQLiteStatement stmt = connection.prepare(
             "INSERT INTO " + TABLE_USERS
