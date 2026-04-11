@@ -15,10 +15,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * RecyclerView adapter that displays {@link TimePeriodAverage} rows
+ * (weekly or monthly summaries) as cards showing the period label,
+ * average weight, and entry count.
+ */
 public class SummaryAdapter extends RecyclerView.Adapter<SummaryAdapter.SummaryViewHolder> {
 
     private final ArrayList<TimePeriodAverage> data = new ArrayList<>();
 
+    /**
+     * Replaces the current data set and refreshes the list.
+     */
     public void setData(List<TimePeriodAverage> newData) {
         data.clear();
         if (newData != null) data.addAll(newData);
@@ -45,6 +53,9 @@ public class SummaryAdapter extends RecyclerView.Adapter<SummaryAdapter.SummaryV
         return data.size();
     }
 
+    /**
+     * ViewHolder for a single summary row.
+     */
     public static class SummaryViewHolder extends RecyclerView.ViewHolder {
         TextView tvPeriod, tvAvgWeight, tvEntryCount;
 

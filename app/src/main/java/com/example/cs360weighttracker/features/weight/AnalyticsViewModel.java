@@ -11,6 +11,14 @@ import com.example.cs360weighttracker.data.WeightRepository;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * ViewModel for the analytics dashboard screen.
+ *
+ * <p>Fetches weight entries from the repository and computes
+ * statistics (rate of change, min/max, streaks, moving averages,
+ * projected goal date) via {@link WeightAnalytics}. Results are
+ * published through {@link LiveData} as an {@link AnalyticsResult}.</p>
+ */
 public class AnalyticsViewModel extends ViewModel {
 
     private WeightRepository repository;
@@ -19,6 +27,10 @@ public class AnalyticsViewModel extends ViewModel {
 
     private final MutableLiveData<AnalyticsResult> analyticsResult = new MutableLiveData<>();
 
+    /**
+     * One-time initializer — supplies the repository, user ID, and
+     * goal weight, then triggers the initial analytics computation.
+     */
     public void init(WeightRepository repository, int userId, double goalWeight) {
         if (this.repository != null) return;
         this.repository = repository;
@@ -27,10 +39,17 @@ public class AnalyticsViewModel extends ViewModel {
         loadAnalytics();
     }
 
+    /**
+     * Observable analytics computation result.
+     */
     public LiveData<AnalyticsResult> getAnalyticsResult() {
         return analyticsResult;
     }
 
+    /**
+     * Recomputes all analytics from the current repository data and
+     * publishes a new {@link AnalyticsResult}.
+     */
     public void loadAnalytics() {
         if (repository == null || userId == -1) return;
 
@@ -61,6 +80,10 @@ public class AnalyticsViewModel extends ViewModel {
         analyticsResult.setValue(result);
     }
 
+    /**
+     * Container for all computed analytics fields consumed by the
+     * Activity UI.
+     */
     public static class AnalyticsResult {
         public boolean hasData;
         public double goalWeight;

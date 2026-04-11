@@ -14,6 +14,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Central SQLite data-access object backed by the BundledSQLiteDriver.
+ *
+ * <p>Manages schema creation/migration and exposes CRUD operations
+ * for the {@code users} and {@code weights} tables. Implements
+ * {@link Closeable} so callers can release the underlying connection.</p>
+ */
 public class DatabaseHelper implements Closeable {
 
     private static final String TAG = "DatabaseHelper";
@@ -26,7 +33,12 @@ public class DatabaseHelper implements Closeable {
 
     private final SQLiteConnection connection;
 
-    // Constructor
+    /**
+     * Opens (or creates) the database file and runs any pending
+     * migrations.
+     *
+     * @param context Android context used to resolve the DB file path
+     */
     public DatabaseHelper(Context context) {
         File dbFile = context.getDatabasePath(DATABASE_NAME);
         File dbDir = dbFile.getParentFile();
@@ -240,6 +252,11 @@ public class DatabaseHelper implements Closeable {
 
     // --- User Logic ---
 
+    /**
+     * Creates a new user row with a bcrypt-hashed password.
+     *
+     * @return {@code true} if the user was inserted successfully
+     */
     public boolean createUser(String username, String password, double goalWeight, String phoneNumber) {
         SQLiteStatement stmt = connection.prepare(
             "INSERT INTO " + TABLE_USERS
@@ -262,6 +279,14 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Authenticates a user by username and password.
+     *
+     * <p>Supports both bcrypt hashes and legacy plain-text passwords.
+     * Plain-text matches are automatically upgraded to bcrypt.</p>
+     *
+     * @return the user's ID on success, or {@code -1} on failure
+     */
     public int loginUser(String username, String password) {
         SQLiteStatement stmt = connection.prepare(
             "SELECT id, password FROM " + TABLE_USERS + " WHERE username=?");
@@ -297,6 +322,10 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Returns the phone number for the given user, or an empty string
+     * if none is stored.
+     */
     public String getPhoneNumber(int userId) {
         SQLiteStatement stmt = connection.prepare(
             "SELECT phone_number FROM " + TABLE_USERS + " WHERE id=?");
@@ -312,6 +341,10 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Checks whether the goal-reached SMS has already been sent for
+     * this user.
+     */
     public boolean isGoalSmsSent(int userId) {
         SQLiteStatement stmt = connection.prepare(
             "SELECT goal_reached_sent FROM " + TABLE_USERS + " WHERE id=?");
@@ -327,6 +360,9 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Marks the goal-reached SMS as sent so it is not re-sent.
+     */
     public void setGoalSmsSent(int userId) {
         SQLiteStatement stmt = connection.prepare(
             "UPDATE " + TABLE_USERS + " SET goal_reached_sent=1 WHERE id=?");
@@ -338,6 +374,11 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Loads a {@link UserProfile} snapshot for the given user.
+     *
+     * @return the profile, or {@code null} if the user does not exist
+     */
     public UserProfile getUserProfile(int userId) {
         SQLiteStatement stmt = connection.prepare(
             "SELECT username, goal_weight, phone_number FROM " + TABLE_USERS + " WHERE id=?");
@@ -356,6 +397,14 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Updates a user's goal weight and phone number.
+     *
+     * <p>If the goal weight changed, the {@code goal_reached_sent}
+     * flag is reset so the SMS can trigger again.</p>
+     *
+     * @return {@code true} if a row was updated
+     */
     public boolean updateUser(int userId, double goalWeight, String phoneNumber) {
         // Only reset SMS flag when goal weight actually changes
         double currentGoal = getGoalWeight(userId);
@@ -388,10 +437,20 @@ public class DatabaseHelper implements Closeable {
 
     // --- Weight Logic ---
 
+    /**
+     * Inserts a weight entry without notes.
+     *
+     * @return {@code true} if the row was inserted
+     */
     public boolean addWeight(int userId, String date, double weight) {
         return addWeight(userId, date, weight, "");
     }
 
+    /**
+     * Inserts a weight entry with optional notes.
+     *
+     * @return {@code true} if the row was inserted
+     */
     public boolean addWeight(int userId, String date, double weight, String notes) {
         SQLiteStatement stmt = connection.prepare(
             "INSERT INTO " + TABLE_WEIGHTS
@@ -410,6 +469,9 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Returns all weight entries for a user, newest date first.
+     */
     public List<WeightEntry> getWeights(int userId) {
         List<WeightEntry> list = new ArrayList<>();
         SQLiteStatement stmt = connection.prepare(
@@ -430,6 +492,10 @@ public class DatabaseHelper implements Closeable {
         return list;
     }
 
+    /**
+     * Returns weight entries between {@code startDate} and
+     * {@code endDate} inclusive, newest first.
+     */
     public List<WeightEntry> getWeightsInRange(int userId, String startDate, String endDate) {
         List<WeightEntry> list = new ArrayList<>();
         SQLiteStatement stmt = connection.prepare(
@@ -452,6 +518,10 @@ public class DatabaseHelper implements Closeable {
         return list;
     }
 
+    /**
+     * Full-text search on weight notes using FTS5, with a LIKE
+     * fallback if FTS fails.
+     */
     public List<WeightEntry> searchWeightNotes(int userId, String query) {
         List<WeightEntry> list = new ArrayList<>();
         if (query == null || query.trim().isEmpty()) {
@@ -512,6 +582,9 @@ public class DatabaseHelper implements Closeable {
             .replace("_", "\\_");
     }
 
+    /**
+     * Returns weekly averages grouped by ISO week, newest first.
+     */
     public List<TimePeriodAverage> getWeeklyAverages(int userId) {
         List<TimePeriodAverage> list = new ArrayList<>();
         SQLiteStatement stmt = connection.prepare(
@@ -531,6 +604,9 @@ public class DatabaseHelper implements Closeable {
         return list;
     }
 
+    /**
+     * Returns monthly averages grouped by year-month, newest first.
+     */
     public List<TimePeriodAverage> getMonthlyAverages(int userId) {
         List<TimePeriodAverage> list = new ArrayList<>();
         SQLiteStatement stmt = connection.prepare(
@@ -550,6 +626,11 @@ public class DatabaseHelper implements Closeable {
         return list;
     }
 
+    /**
+     * Updates the date and weight of an existing entry.
+     *
+     * @return {@code true} if a row was affected
+     */
     public boolean updateWeight(int weightId, String date, double weight) {
         SQLiteStatement stmt = connection.prepare(
             "UPDATE " + TABLE_WEIGHTS + " SET date=?, weight=? WHERE id=?");
@@ -564,6 +645,11 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Updates the date, weight, and notes of an existing entry.
+     *
+     * @return {@code true} if a row was affected
+     */
     public boolean updateWeight(int weightId, String date, double weight, String notes) {
         SQLiteStatement stmt = connection.prepare(
             "UPDATE " + TABLE_WEIGHTS + " SET date=?, weight=?, notes=? WHERE id=?");
@@ -579,6 +665,11 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Updates only the notes for an existing entry.
+     *
+     * @return {@code true} if a row was affected
+     */
     public boolean updateWeightNotes(int weightId, String notes) {
         SQLiteStatement stmt = connection.prepare(
             "UPDATE " + TABLE_WEIGHTS + " SET notes=? WHERE id=?");
@@ -592,6 +683,13 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Bulk-inserts multiple weight rows inside a single transaction.
+     *
+     * @param userId owner user ID
+     * @param rows   list of {@code {date, weight[, notes]}} arrays
+     * @return the number of rows successfully inserted
+     */
     public int bulkAddWeights(int userId, java.util.List<String[]> rows) {
         int imported = 0;
         SQLiteStatement stmt = connection.prepare(
@@ -632,6 +730,11 @@ public class DatabaseHelper implements Closeable {
         return imported;
     }
 
+    /**
+     * Deletes a weight entry by row ID.
+     *
+     * @return {@code true} if a row was deleted
+     */
     public boolean deleteWeight(int weightId) {
         SQLiteStatement stmt = connection.prepare(
             "DELETE FROM " + TABLE_WEIGHTS + " WHERE id=?");
@@ -644,6 +747,10 @@ public class DatabaseHelper implements Closeable {
         }
     }
 
+    /**
+     * Returns the goal weight for a user, or {@code -1} if the user
+     * does not exist.
+     */
     public double getGoalWeight(int userId) {
         SQLiteStatement stmt = connection.prepare(
             "SELECT goal_weight FROM " + TABLE_USERS + " WHERE id=?");

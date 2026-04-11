@@ -8,8 +8,24 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Imports weight entries from a CSV {@link InputStream} into the database.
+ *
+ * <p>Expected CSV format: {@code date,weight,notes} with an optional
+ * header row. Rows that fail date or numeric validation are silently
+ * skipped.</p>
+ */
 public class DataImporter {
 
+    /**
+     * Parses a CSV input stream and bulk-inserts valid rows.
+     *
+     * @param userId      the owning user's ID
+     * @param inputStream CSV data (UTF-8)
+     * @param dbHelper    database helper for insertion
+     * @return the number of rows successfully imported
+     * @throws IOException if reading the stream fails
+     */
     public static int importFromCsv(int userId, InputStream inputStream,
                                     DatabaseHelper dbHelper) throws IOException {
         BufferedReader reader = new BufferedReader(
@@ -53,6 +69,13 @@ public class DataImporter {
         return dbHelper.bulkAddWeights(userId, validRows);
     }
 
+    /**
+     * Parses a single CSV line respecting quoted fields and escaped
+     * double-quotes.
+     *
+     * @param line raw CSV line
+     * @return array of field values
+     */
     static String[] parseCsvLine(String line) {
         List<String> fields = new ArrayList<>();
         StringBuilder current = new StringBuilder();
