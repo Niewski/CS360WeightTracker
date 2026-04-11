@@ -25,7 +25,7 @@ public class DatabaseHelper implements Closeable {
 
     private static final String TAG = "DatabaseHelper";
     private static final String DATABASE_NAME = "weight_tracker.db";
-    private static final int DATABASE_VERSION = 7;
+    private static final int DATABASE_VERSION = 8;
 
     // Table names
     private static final String TABLE_USERS = "users";
@@ -52,6 +52,7 @@ public class DatabaseHelper implements Closeable {
 
     private void initializeDatabase() {
         execSQL("PRAGMA journal_mode=WAL");
+        execSQL("PRAGMA foreign_keys=ON");
         int currentVersion = getSchemaVersion();
 
         if (currentVersion > DATABASE_VERSION) {
@@ -143,10 +144,10 @@ public class DatabaseHelper implements Closeable {
             + "phone_number TEXT, "
             + "goal_reached_sent INTEGER DEFAULT 0)");
 
-        // Create Weights Table (with notes column)
+        // Create Weights Table (with notes column and FK constraint)
         execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_WEIGHTS + " ("
             + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-            + "userId INTEGER, "
+            + "userId INTEGER NOT NULL REFERENCES " + TABLE_USERS + "(id) ON DELETE CASCADE, "
             + "date TEXT, "
             + "weight REAL, "
             + "notes TEXT DEFAULT '')");
@@ -238,6 +239,48 @@ public class DatabaseHelper implements Closeable {
             createFts5Triggers();
 
             // Rebuild the FTS index from existing data
+            try {
+                execSQL("INSERT INTO weights_fts(weights_fts) VALUES('rebuild')");
+            } catch (Exception ignored) {
+            }
+        }
+        if (oldVersion < 8) {
+            // Add FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE.
+            // SQLite requires table re-creation to add constraints.
+
+            // 1. Drop FTS triggers that reference the old weights table
+            execSQL("DROP TRIGGER IF EXISTS weights_ai");
+            execSQL("DROP TRIGGER IF EXISTS weights_ad");
+            execSQL("DROP TRIGGER IF EXISTS weights_au");
+
+            // 2. Drop FTS virtual table (content table is about to change)
+            execSQL("DROP TABLE IF EXISTS weights_fts");
+
+            // 3. Create new weights table with FK constraint
+            execSQL("CREATE TABLE weights_new ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "userId INTEGER NOT NULL REFERENCES " + TABLE_USERS + "(id) ON DELETE CASCADE, "
+                + "date TEXT, "
+                + "weight REAL, "
+                + "notes TEXT DEFAULT '')");
+
+            // 4. Copy valid rows (skip orphaned weights with no matching user)
+            execSQL("INSERT INTO weights_new (id, userId, date, weight, notes) "
+                + "SELECT w.id, w.userId, w.date, w.weight, w.notes "
+                + "FROM " + TABLE_WEIGHTS + " w "
+                + "INNER JOIN " + TABLE_USERS + " u ON w.userId = u.id");
+
+            // 5. Drop old table and rename new one
+            execSQL("DROP TABLE " + TABLE_WEIGHTS);
+            execSQL("ALTER TABLE weights_new RENAME TO " + TABLE_WEIGHTS);
+
+            // 6. Recreate compound index
+            execSQL("CREATE INDEX IF NOT EXISTS idx_weights_user_date ON "
+                + TABLE_WEIGHTS + "(userId, date)");
+
+            // 7. Recreate FTS5 table, triggers, and rebuild index
+            createFts5Table();
+            createFts5Triggers();
             try {
                 execSQL("INSERT INTO weights_fts(weights_fts) VALUES('rebuild')");
             } catch (Exception ignored) {
