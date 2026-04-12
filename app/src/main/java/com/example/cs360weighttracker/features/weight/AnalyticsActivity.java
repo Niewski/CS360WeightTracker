@@ -1,6 +1,5 @@
 package com.example.cs360weighttracker.features.weight;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.Button;
@@ -26,7 +25,7 @@ import java.util.Locale;
  * projected goal date, and 7-day moving averages).
  *
  * <p>Delegates computation to {@link AnalyticsViewModel} and
- * observes the result via {@link LiveData}.</p>
+ * observes the result</p>
  */
 public class AnalyticsActivity extends AppCompatActivity {
 
