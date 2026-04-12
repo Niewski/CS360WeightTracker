@@ -2,8 +2,6 @@ package com.example.cs360weighttracker.features.weight;
 
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
@@ -12,6 +10,8 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.TestDatabaseHelper;
+import com.example.cs360weighttracker.data.WeightEntry;
 
 import org.junit.After;
 import org.junit.Before;
@@ -35,21 +35,21 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 @RunWith(AndroidJUnit4.class)
 public class AddWeightActivityTest {
 
-    private DatabaseHelper dbHelper;
+    private TestDatabaseHelper dbHelper;
     private int testUserId;
 
     @Before
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        dbHelper = new DatabaseHelper(context);
+        dbHelper = new TestDatabaseHelper(context);
         // Clean up any leftovers from previous test runs
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("users", "username=?", new String[]{"testuser"});
+        dbHelper.testDeleteUserByUsername("testuser");
         // Create test user with goal 150.0, no phone
         dbHelper.createUser("testuser", "testpass", 150.0, null);
         testUserId = dbHelper.loginUser("testuser", "testpass");
@@ -58,9 +58,14 @@ public class AddWeightActivityTest {
 
     @After
     public void tearDown() {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("weights", "userId=?", new String[]{String.valueOf(testUserId)});
-        db.delete("users", "id=?", new String[]{String.valueOf(testUserId)});
+        if (dbHelper != null) {
+            try {
+                dbHelper.testDeleteWeightsByUserId(testUserId);
+                dbHelper.testDeleteUserById(testUserId);
+            } finally {
+                dbHelper.close();
+            }
+        }
     }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {
@@ -128,11 +133,9 @@ public class AddWeightActivityTest {
             onView(withId(R.id.btnSaveWeight)).perform(click());
 
             // Verify weight was persisted
-            Cursor cursor = dbHelper.getWeights(testUserId);
-            assertTrue("Weight entry should exist", cursor.moveToFirst());
-            double weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight"));
-            assertEquals(165.5, weight, 0.01);
-            cursor.close();
+            List<WeightEntry> entries = dbHelper.getWeights(testUserId);
+            assertFalse("Weight entry should exist", entries.isEmpty());
+            assertEquals(165.5, entries.get(0).weight, 0.01);
         }
     }
 
@@ -146,9 +149,8 @@ public class AddWeightActivityTest {
             onView(withId(R.id.btnSaveWeight)).perform(click());
 
             // No weight should have been inserted
-            Cursor cursor = dbHelper.getWeights(testUserId);
-            assertFalse("No weight entry should exist", cursor.moveToFirst());
-            cursor.close();
+            List<WeightEntry> entries = dbHelper.getWeights(testUserId);
+            assertTrue("No weight entry should exist", entries.isEmpty());
         }
     }
 
@@ -192,11 +194,9 @@ public class AddWeightActivityTest {
             onView(withId(R.id.btnSaveWeight)).perform(click());
 
             // Weight should be persisted
-            Cursor cursor = dbHelper.getWeights(testUserId);
-            assertTrue("Weight entry should exist", cursor.moveToFirst());
-            double weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight"));
-            assertEquals(149.0, weight, 0.01);
-            cursor.close();
+            List<WeightEntry> entries = dbHelper.getWeights(testUserId);
+            assertFalse("Weight entry should exist", entries.isEmpty());
+            assertEquals(149.0, entries.get(0).weight, 0.01);
 
             // Activity should finish after successful save
             waitForDestroy(scenario);

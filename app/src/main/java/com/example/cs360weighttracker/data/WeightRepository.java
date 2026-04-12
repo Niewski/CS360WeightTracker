@@ -1,7 +1,5 @@
 package com.example.cs360weighttracker.data;
 
-import android.database.Cursor;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -10,99 +8,119 @@ import java.util.List;
  * Repository that mediates between {@link DatabaseHelper} and the
  * weight-related ViewModels.
  *
- * <p>Converts raw {@link Cursor} results into {@code List<WeightEntry>}
- * and handles cursor lifecycle internally, so callers never manage
- * cursors directly.</p>
- *
- * @see DatabaseHelper
- * @see WeightEntry
- * @see com.example.cs360weighttracker.features.weight.WeightHistoryViewModel
- * @see com.example.cs360weighttracker.features.weight.AddWeightViewModel
- * @see com.example.cs360weighttracker.features.weight.EditWeightViewModel
+ * <p>With the BundledSQLiteDriver migration, DatabaseHelper now returns
+ * {@code List} types directly, so this repository mostly delegates
+ * calls through. It still provides the ascending-sort variant and
+ * shields ViewModels from the data-layer implementation.</p>
  */
 public class WeightRepository {
 
     private final DatabaseHelper dbHelper;
 
     /**
-     * @param dbHelper the database helper instance to delegate to
+     * @param dbHelper database helper instance
      */
     public WeightRepository(DatabaseHelper dbHelper) {
         this.dbHelper = dbHelper;
     }
 
     /**
-     * Retrieves all weight entries for the specified user, ordered by date
-     * descending (most recent first).
-     *
-     * <p>Iterates the database cursor, converts each row to a
-     * {@link WeightEntry}, then closes the cursor before returning.</p>
-     *
-     * @param userId the owning user's primary-key ID
-     * @return a list of weight entries; empty list if none exist
+     * Returns all weight entries for a user, newest first.
      */
     public List<WeightEntry> getWeights(int userId) {
-        List<WeightEntry> list = new ArrayList<>();
-        Cursor cursor = dbHelper.getWeights(userId);
-        if (cursor != null) {
-            while (cursor.moveToNext()) {
-                int id = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-                String date = cursor.getString(cursor.getColumnIndexOrThrow("date"));
-                double weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight"));
-                list.add(new WeightEntry(id, date, weight));
-            }
-            cursor.close();
-        }
+        return dbHelper.getWeights(userId);
+    }
+
+    /**
+     * Returns all weight entries for a user sorted oldest-first
+     * (natural {@link WeightEntry} order).
+     */
+    public List<WeightEntry> getWeightsAscending(int userId) {
+        List<WeightEntry> list = new ArrayList<>(dbHelper.getWeights(userId));
+        Collections.sort(list);
         return list;
     }
 
     /**
-     * Inserts a new weight entry.
+     * Returns weight entries between {@code startDate} and
+     * {@code endDate} inclusive, newest first.
+     */
+    public List<WeightEntry> getWeightsInRange(int userId, String startDate, String endDate) {
+        return dbHelper.getWeightsInRange(userId, startDate, endDate);
+    }
+
+    /**
+     * Full-text search on weight entry notes.
+     */
+    public List<WeightEntry> searchWeightNotes(int userId, String query) {
+        return dbHelper.searchWeightNotes(userId, query);
+    }
+
+    /**
+     * Returns weekly averages for a user, newest week first.
+     */
+    public List<TimePeriodAverage> getWeeklyAverages(int userId) {
+        return dbHelper.getWeeklyAverages(userId);
+    }
+
+    /**
+     * Returns monthly averages for a user, newest month first.
+     */
+    public List<TimePeriodAverage> getMonthlyAverages(int userId) {
+        return dbHelper.getMonthlyAverages(userId);
+    }
+
+    /**
+     * Inserts a new weight entry without notes.
      *
-     * @param userId the owning user's primary-key ID
-     * @param date   the entry date in {@code YYYY-MM-DD} format
-     * @param weight the weight value in pounds
-     * @return {@code true} if the row was inserted successfully
-     * @see DatabaseHelper#addWeight(int, String, double)
+     * @return {@code true} if the row was inserted
      */
     public boolean addWeight(int userId, String date, double weight) {
         return dbHelper.addWeight(userId, date, weight);
     }
 
     /**
-     * Updates an existing weight entry's date and weight.
+     * Inserts a new weight entry with notes.
      *
-     * @param weightId the primary-key ID of the weight row
-     * @param date     the new date in {@code YYYY-MM-DD} format
-     * @param weight   the new weight value in pounds
-     * @return {@code true} if the row was updated
-     * @see DatabaseHelper#updateWeight(int, String, double)
+     * @return {@code true} if the row was inserted
+     */
+    public boolean addWeight(int userId, String date, double weight, String notes) {
+        return dbHelper.addWeight(userId, date, weight, notes);
+    }
+
+    /**
+     * Updates the date and weight of an existing entry.
+     *
+     * @return {@code true} if a row was affected
      */
     public boolean updateWeight(int weightId, String date, double weight) {
         return dbHelper.updateWeight(weightId, date, weight);
     }
 
     /**
-     * Deletes a weight entry by its primary key.
+     * Updates the date, weight, and notes of an existing entry.
      *
-     * @param weightId the primary-key ID of the weight row to delete
-     * @return {@code true} if a row was deleted
-     * @see DatabaseHelper#deleteWeight(int)
+     * @return {@code true} if a row was affected
      */
-    public boolean deleteWeight(int weightId) {
-        return dbHelper.deleteWeight(weightId);
+    public boolean updateWeight(int weightId, String date, double weight, String notes) {
+        return dbHelper.updateWeight(weightId, date, weight, notes);
     }
 
     /**
-     * Retrieves all weight entries for the specified user, ordered by date
-     * ascending (oldest first) — suitable for analytics calculations.
+     * Updates only the notes field of an existing entry.
      *
-     * @param userId the owning user's primary-key ID
-     * @return a list of weight entries sorted ascending by date
+     * @return {@code true} if a row was affected
      */
-    public List<WeightEntry> getWeightsAscending(int userId) {
-        List<WeightEntry> list = getWeights(userId);
-        Collections.sort(list);
-        return list;
+    public boolean updateWeightNotes(int weightId, String notes) {
+        return dbHelper.updateWeightNotes(weightId, notes);
+    }
+
+    /**
+     * Deletes a weight entry by its row ID.
+     *
+     * @return {@code true} if a row was deleted
+     */
+    public boolean deleteWeight(int weightId) {
+        return dbHelper.deleteWeight(weightId);
     }
 }

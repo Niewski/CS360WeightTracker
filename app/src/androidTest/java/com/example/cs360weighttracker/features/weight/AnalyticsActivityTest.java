@@ -2,7 +2,6 @@ package com.example.cs360weighttracker.features.weight;
 
 import android.content.Context;
 import android.content.Intent;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
@@ -11,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.cs360weighttracker.R;
 import com.example.cs360weighttracker.data.DatabaseHelper;
+import com.example.cs360weighttracker.data.TestDatabaseHelper;
 
 import org.junit.After;
 import org.junit.Before;
@@ -30,17 +30,16 @@ import static org.junit.Assert.assertTrue;
 @RunWith(AndroidJUnit4.class)
 public class AnalyticsActivityTest {
 
-    private DatabaseHelper dbHelper;
+    private TestDatabaseHelper dbHelper;
     private int testUserId;
 
     @Before
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        dbHelper = new DatabaseHelper(context);
+        dbHelper = new TestDatabaseHelper(context);
 
         // Clean up leftovers
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("users", "username=?", new String[]{"testuser"});
+        dbHelper.testDeleteUserByUsername("testuser");
 
         // Create test user with goal 150.0
         dbHelper.createUser("testuser", "testpass", 150.0, null);
@@ -50,9 +49,14 @@ public class AnalyticsActivityTest {
 
     @After
     public void tearDown() {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete("weights", "userId=?", new String[]{String.valueOf(testUserId)});
-        db.delete("users", "id=?", new String[]{String.valueOf(testUserId)});
+        if (dbHelper != null) {
+            try {
+                dbHelper.testDeleteWeightsByUserId(testUserId);
+                dbHelper.testDeleteUserById(testUserId);
+            } finally {
+                dbHelper.close();
+            }
+        }
     }
 
     private void waitForDestroy(ActivityScenario<?> scenario) throws InterruptedException {

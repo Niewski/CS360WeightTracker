@@ -42,17 +42,18 @@ public class EditWeightViewModel extends ViewModel {
      * @param date      new date in YYYY-MM-DD format
      * @param weightStr new weight string to parse as double
      */
-    public void updateWeight(String date, String weightStr) {
+    public void updateWeight(String date, String weightStr, String notes) {
         if (date.isEmpty() || weightStr.isEmpty()) {
             updateResult.setValue(false);
             return;
         }
         try {
             double weight = Double.parseDouble(weightStr);
-            boolean updated = repository.updateWeight(weightId, date, weight);
+            boolean updated = repository.updateWeight(weightId, date, weight, notes);
             updateResult.setValue(updated);
         } catch (NumberFormatException e) {
             updateResult.setValue(false);
         }
     }
+
 }

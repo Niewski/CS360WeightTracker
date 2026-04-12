@@ -56,7 +56,7 @@ public class AddWeightViewModel extends ViewModel {
      * Validates input, inserts the weight row, and emits events as
      * appropriate.
      */
-    public void saveWeight(String date, String weightStr) {
+    public void saveWeight(String date, String weightStr, String notes) {
         if (date.isEmpty() || weightStr.isEmpty()) {
             saveResult.setValue(false);
             return;
@@ -64,7 +64,7 @@ public class AddWeightViewModel extends ViewModel {
 
         try {
             double weight = Double.parseDouble(weightStr);
-            boolean inserted = weightRepository.addWeight(userId, date, weight);
+            boolean inserted = weightRepository.addWeight(userId, date, weight, notes);
 
             if (!inserted) {
                 saveResult.setValue(false);

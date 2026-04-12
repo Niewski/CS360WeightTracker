@@ -1,193 +1,882 @@
 package com.example.cs360weighttracker.data;
 
-import android.content.ContentValues;
 import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
-public class DatabaseHelper extends SQLiteOpenHelper {
+import androidx.annotation.VisibleForTesting;
 
+import androidx.sqlite.SQLiteConnection;
+import androidx.sqlite.SQLiteStatement;
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver;
+
+import java.io.Closeable;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Central SQLite data-access object backed by the BundledSQLiteDriver.
+ *
+ * <p>Manages schema creation/migration and exposes CRUD operations
+ * for the {@code users} and {@code weights} tables. Implements
+ * {@link Closeable} so callers can release the underlying connection.</p>
+ */
+public class DatabaseHelper implements Closeable {
+
+    private static final String TAG = "DatabaseHelper";
     private static final String DATABASE_NAME = "weight_tracker.db";
-    private static final int DATABASE_VERSION = 4;
+    private static final int DATABASE_VERSION = 8;
 
     // Table names
     private static final String TABLE_USERS = "users";
     private static final String TABLE_WEIGHTS = "weights";
 
-    // Constructor
+    private final SQLiteConnection connection;
+
+    /**
+     * Opens (or creates) the database file and runs any pending
+     * migrations.
+     *
+     * @param context Android context used to resolve the DB file path
+     */
     public DatabaseHelper(Context context) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        File dbFile = context.getDatabasePath(DATABASE_NAME);
+        File dbDir = dbFile.getParentFile();
+        if (dbDir != null && !dbDir.exists()) {
+            dbDir.mkdirs();
+        }
+        BundledSQLiteDriver driver = new BundledSQLiteDriver();
+        connection = driver.open(dbFile.getAbsolutePath());
+        initializeDatabase();
     }
 
-    // onCreate is called only once when the database is first created
-    @Override
-    public void onCreate(SQLiteDatabase db) {
-        // Create Users Table
-        String createUsersTable = "CREATE TABLE IF NOT EXISTS " + TABLE_USERS + " (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "username TEXT UNIQUE, " +
-                "password TEXT, " +
-                "goal_weight REAL, " +
-                "phone_number TEXT, " +
-                "goal_reached_sent INTEGER DEFAULT 0)";
-        db.execSQL(createUsersTable);
+    private void initializeDatabase() {
+        execSQL("PRAGMA journal_mode=WAL");
+        execSQL("PRAGMA foreign_keys=ON");
+        int currentVersion = getSchemaVersion();
 
-        // Create Weights Table
-        String createWeightsTable = "CREATE TABLE IF NOT EXISTS " + TABLE_WEIGHTS + " (" +
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "userId INTEGER, " +
-            "date TEXT, " +
-            "weight REAL)";
-        db.execSQL(createWeightsTable);
+        if (currentVersion > DATABASE_VERSION) {
+            throw new IllegalStateException(
+                "Database version " + currentVersion + " is newer than supported version " + DATABASE_VERSION);
+        }
+
+        if (currentVersion == DATABASE_VERSION) {
+            return;
+        }
+
+        execSQL("BEGIN TRANSACTION");
+        boolean success = false;
+        try {
+            if (currentVersion == 0) {
+                onCreate();
+            } else {
+                onUpgrade(currentVersion, DATABASE_VERSION);
+            }
+            setSchemaVersion(DATABASE_VERSION);
+            success = true;
+        } finally {
+            execSQL(success ? "COMMIT" : "ROLLBACK");
+        }
+    }
+
+    private void execSQL(String sql) {
+        SQLiteStatement stmt = connection.prepare(sql);
+        try {
+            stmt.step();
+        } finally {
+            stmt.close();
+        }
+    }
+
+    private int getSchemaVersion() {
+        SQLiteStatement stmt = connection.prepare("PRAGMA user_version");
+        try {
+            if (stmt.step()) {
+                return (int) stmt.getLong(0);
+            }
+        } finally {
+            stmt.close();
+        }
+        return 0;
+    }
+
+    private void setSchemaVersion(int version) {
+        execSQL("PRAGMA user_version = " + version);
+    }
+
+    private int getChanges() {
+        SQLiteStatement stmt = connection.prepare("SELECT changes()");
+        try {
+            stmt.step();
+            return (int) stmt.getLong(0);
+        } finally {
+            stmt.close();
+        }
+    }
+
+    private void createFts5Table() {
+        execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS weights_fts USING fts5("
+            + "notes, content='" + TABLE_WEIGHTS + "', content_rowid='id')");
+    }
+
+    private void createFts5Triggers() {
+        execSQL("CREATE TRIGGER IF NOT EXISTS weights_ai AFTER INSERT ON " + TABLE_WEIGHTS
+            + " BEGIN INSERT INTO weights_fts(rowid, notes) VALUES (new.id, new.notes); END;");
+
+        execSQL("CREATE TRIGGER IF NOT EXISTS weights_ad AFTER DELETE ON " + TABLE_WEIGHTS
+            + " BEGIN INSERT INTO weights_fts(weights_fts, rowid, notes) "
+            + "VALUES('delete', old.id, old.notes); END;");
+
+        execSQL("CREATE TRIGGER IF NOT EXISTS weights_au AFTER UPDATE ON " + TABLE_WEIGHTS
+            + " BEGIN INSERT INTO weights_fts(weights_fts, rowid, notes) "
+            + "VALUES('delete', old.id, old.notes); "
+            + "INSERT INTO weights_fts(rowid, notes) VALUES (new.id, new.notes); END;");
+    }
+
+    // onCreate is called when the database is first created (user_version == 0)
+    private void onCreate() {
+        // Create Users Table
+        execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_USERS + " ("
+            + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            + "username TEXT UNIQUE, "
+            + "password TEXT, "
+            + "goal_weight REAL, "
+            + "phone_number TEXT, "
+            + "goal_reached_sent INTEGER DEFAULT 0)");
+
+        // Create Weights Table (with notes column and FK constraint)
+        execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_WEIGHTS + " ("
+            + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            + "userId INTEGER NOT NULL REFERENCES " + TABLE_USERS + "(id) ON DELETE CASCADE, "
+            + "date TEXT, "
+            + "weight REAL, "
+            + "notes TEXT DEFAULT '')");
 
         // Compound index for efficient user+date lookups
-        db.execSQL("CREATE INDEX IF NOT EXISTS idx_weights_user_date ON "
+        execSQL("CREATE INDEX IF NOT EXISTS idx_weights_user_date ON "
             + TABLE_WEIGHTS + "(userId, date)");
+
+        // FTS5 virtual table for full-text search on weight notes
+        createFts5Table();
+
+        // Triggers to keep FTS5 in sync
+        createFts5Triggers();
     }
 
-    // onUpgrade is called when DATABASE_VERSION is incremented
-    @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    // onUpgrade is called when user_version < DATABASE_VERSION
+    private void onUpgrade(int oldVersion, int newVersion) {
         if (oldVersion < 3) {
             // Legacy path — drop and recreate
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_WEIGHTS);
-            onCreate(db);
+            execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
+            execSQL("DROP TABLE IF EXISTS " + TABLE_WEIGHTS);
+            onCreate();
             return;
         }
         if (oldVersion < 4) {
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_weights_user_date ON "
+            execSQL("CREATE INDEX IF NOT EXISTS idx_weights_user_date ON "
                 + TABLE_WEIGHTS + "(userId, date)");
         }
+        if (oldVersion < 5) {
+            // Add notes column to weights table if missing
+            try {
+                execSQL("ALTER TABLE " + TABLE_WEIGHTS + " ADD COLUMN notes TEXT DEFAULT ''");
+            } catch (Exception ignored) {
+            }
+
+            // Create FTS5 table and triggers if not present
+            createFts5Table();
+            createFts5Triggers();
+
+            // Populate FTS table from existing content
+            try {
+                execSQL("INSERT INTO weights_fts(rowid, notes) SELECT id, notes FROM " + TABLE_WEIGHTS);
+            } catch (Exception ignored) {
+            }
+        }
+        if (oldVersion < 6) {
+            // Hash all existing plain-text passwords with bcrypt (transactional)
+            execSQL("BEGIN TRANSACTION");
+            try {
+                // Read all users first to avoid modifying while iterating
+                List<int[]> ids = new ArrayList<>();
+                List<String> passwords = new ArrayList<>();
+                SQLiteStatement readStmt = connection.prepare(
+                    "SELECT id, password FROM " + TABLE_USERS);
+                try {
+                    while (readStmt.step()) {
+                        ids.add(new int[]{(int) readStmt.getLong(0)});
+                        passwords.add(readStmt.isNull(1) ? null : readStmt.getText(1));
+                    }
+                } finally {
+                    readStmt.close();
+                }
+
+                for (int i = 0; i < ids.size(); i++) {
+                    int id = ids.get(i)[0];
+                    String plainPassword = passwords.get(i);
+                    if (plainPassword != null && !plainPassword.startsWith("$2a$")) {
+                        String hashedPassword = PasswordUtils.hashPassword(plainPassword);
+                        SQLiteStatement updateStmt = connection.prepare(
+                            "UPDATE " + TABLE_USERS + " SET password=? WHERE id=?");
+                        try {
+                            updateStmt.bindText(1, hashedPassword);
+                            updateStmt.bindLong(2, id);
+                            updateStmt.step();
+                        } finally {
+                            updateStmt.close();
+                        }
+                    }
+                }
+                execSQL("COMMIT");
+            } catch (Exception e) {
+                try { execSQL("ROLLBACK"); } catch (Exception ignored) {}
+            }
+        }
+        if (oldVersion < 7) {
+            // Ensure FTS5 table and triggers exist — they may have been
+            // missing on devices where the old framework SQLite lacked FTS5
+            createFts5Table();
+            createFts5Triggers();
+
+            // Rebuild the FTS index from existing data
+            try {
+                execSQL("INSERT INTO weights_fts(weights_fts) VALUES('rebuild')");
+            } catch (Exception ignored) {
+            }
+        }
+        if (oldVersion < 8) {
+            // Add FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE.
+            // SQLite requires table re-creation to add constraints.
+
+            // 1. Drop FTS triggers that reference the old weights table
+            execSQL("DROP TRIGGER IF EXISTS weights_ai");
+            execSQL("DROP TRIGGER IF EXISTS weights_ad");
+            execSQL("DROP TRIGGER IF EXISTS weights_au");
+
+            // 2. Drop FTS virtual table (content table is about to change)
+            execSQL("DROP TABLE IF EXISTS weights_fts");
+
+            // 3. Create new weights table with FK constraint
+            execSQL("CREATE TABLE weights_new ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "userId INTEGER NOT NULL REFERENCES " + TABLE_USERS + "(id) ON DELETE CASCADE, "
+                + "date TEXT, "
+                + "weight REAL, "
+                + "notes TEXT DEFAULT '')");
+
+            // 4. Copy valid rows (skip orphaned weights with no matching user)
+            execSQL("INSERT INTO weights_new (id, userId, date, weight, notes) "
+                + "SELECT w.id, w.userId, w.date, w.weight, w.notes "
+                + "FROM " + TABLE_WEIGHTS + " w "
+                + "INNER JOIN " + TABLE_USERS + " u ON w.userId = u.id");
+
+            // 5. Drop old table and rename new one
+            execSQL("DROP TABLE " + TABLE_WEIGHTS);
+            execSQL("ALTER TABLE weights_new RENAME TO " + TABLE_WEIGHTS);
+
+            // 6. Recreate compound index
+            execSQL("CREATE INDEX IF NOT EXISTS idx_weights_user_date ON "
+                + TABLE_WEIGHTS + "(userId, date)");
+
+            // 7. Recreate FTS5 table, triggers, and rebuild index
+            createFts5Table();
+            createFts5Triggers();
+            try {
+                execSQL("INSERT INTO weights_fts(weights_fts) VALUES('rebuild')");
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    @Override
+    public void close() {
+        connection.close();
     }
 
     // --- User Logic ---
+
+    /**
+     * Creates a new user row with a bcrypt-hashed password.
+     *
+     * @return {@code true} if the user was inserted successfully
+     */
     public boolean createUser(String username, String password, double goalWeight, String phoneNumber) {
-        SQLiteDatabase db = getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("username", username);
-        values.put("password", password);
-        values.put("goal_weight", goalWeight);
-        values.put("phone_number", phoneNumber);
-        long result = db.insert("users", null, values);
-        return result != -1;
+        SQLiteStatement stmt = connection.prepare(
+            "INSERT INTO " + TABLE_USERS
+                + " (username, password, goal_weight, phone_number) VALUES (?, ?, ?, ?)");
+        try {
+            stmt.bindText(1, username);
+            stmt.bindText(2, PasswordUtils.hashPassword(password));
+            stmt.bindDouble(3, goalWeight);
+            if (phoneNumber != null) {
+                stmt.bindText(4, phoneNumber);
+            } else {
+                stmt.bindNull(4);
+            }
+            stmt.step();
+            return true;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            stmt.close();
+        }
     }
 
+    /**
+     * Authenticates a user by username and password.
+     *
+     * <p>Supports both bcrypt hashes and legacy plain-text passwords.
+     * Plain-text matches are automatically upgraded to bcrypt.</p>
+     *
+     * @return the user's ID on success, or {@code -1} on failure
+     */
     public int loginUser(String username, String password) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT id FROM users WHERE username=? AND password= ?",
-                new String[]{username, password});
-        int userId = -1;
-        if (cursor.moveToFirst()) {
-            userId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT id, password FROM " + TABLE_USERS + " WHERE username=?");
+        try {
+            stmt.bindText(1, username);
+            int userId = -1;
+            if (stmt.step()) {
+                String storedHash = stmt.isNull(1) ? null : stmt.getText(1);
+                if (storedHash != null && storedHash.startsWith("$2a$")) {
+                    // Bcrypt path
+                    if (PasswordUtils.checkPassword(password, storedHash)) {
+                        userId = (int) stmt.getLong(0);
+                    }
+                } else {
+                    // Legacy plain-text fallback — hash and upgrade on success
+                    if (storedHash != null && storedHash.equals(password)) {
+                        userId = (int) stmt.getLong(0);
+                        SQLiteStatement update = connection.prepare(
+                            "UPDATE " + TABLE_USERS + " SET password=? WHERE id=?");
+                        try {
+                            update.bindText(1, PasswordUtils.hashPassword(password));
+                            update.bindLong(2, userId);
+                            update.step();
+                        } finally {
+                            update.close();
+                        }
+                    }
+                }
+            }
+            return userId;
+        } finally {
+            stmt.close();
         }
-        cursor.close();
-        return userId;
     }
 
+    /**
+     * Returns the phone number for the given user, or an empty string
+     * if none is stored.
+     */
     public String getPhoneNumber(int userId) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT phone_number FROM users WHERE id=?", new String[]{String.valueOf(userId)});
-        String number = "";
-        if (cursor.moveToFirst()) {
-            number = cursor.getString(cursor.getColumnIndexOrThrow("phone_number"));
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT phone_number FROM " + TABLE_USERS + " WHERE id=?");
+        try {
+            stmt.bindLong(1, userId);
+            String number = "";
+            if (stmt.step()) {
+                number = stmt.isNull(0) ? "" : stmt.getText(0);
+            }
+            return number;
+        } finally {
+            stmt.close();
         }
-        cursor.close();
-        return number;
     }
 
+    /**
+     * Checks whether the goal-reached SMS has already been sent for
+     * this user.
+     */
     public boolean isGoalSmsSent(int userId) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT goal_reached_sent FROM users WHERE id=?",
-                new String[]{String.valueOf(userId)});
-        boolean sent = false;
-        if (cursor.moveToFirst()) {
-            sent = cursor.getInt(cursor.getColumnIndexOrThrow("goal_reached_sent")) == 1;
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT goal_reached_sent FROM " + TABLE_USERS + " WHERE id=?");
+        try {
+            stmt.bindLong(1, userId);
+            boolean sent = false;
+            if (stmt.step()) {
+                sent = stmt.getLong(0) == 1;
+            }
+            return sent;
+        } finally {
+            stmt.close();
         }
-        cursor.close();
-        return sent;
     }
 
+    /**
+     * Marks the goal-reached SMS as sent so it is not re-sent.
+     */
     public void setGoalSmsSent(int userId) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("goal_reached_sent", 1);
-        db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
-    }
-
-    public UserProfile getUserProfile(int userId) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT username, goal_weight, phone_number FROM users WHERE id=?",
-                new String[]{String.valueOf(userId)});
-        UserProfile profile = null;
-        if (cursor.moveToFirst()) {
-            String username = cursor.getString(cursor.getColumnIndexOrThrow("username"));
-            double goalWeight = cursor.getDouble(cursor.getColumnIndexOrThrow("goal_weight"));
-            String phone = cursor.getString(cursor.getColumnIndexOrThrow("phone_number"));
-            profile = new UserProfile(username, goalWeight, phone);
+        SQLiteStatement stmt = connection.prepare(
+            "UPDATE " + TABLE_USERS + " SET goal_reached_sent=1 WHERE id=?");
+        try {
+            stmt.bindLong(1, userId);
+            stmt.step();
+        } finally {
+            stmt.close();
         }
-        cursor.close();
-        return profile;
     }
 
-    public boolean updateUser(int userId, double goalWeight, String phoneNumber) {
-        SQLiteDatabase db = this.getWritableDatabase();
+    /**
+     * Loads a {@link UserProfile} snapshot for the given user.
+     *
+     * @return the profile, or {@code null} if the user does not exist
+     */
+    public UserProfile getUserProfile(int userId) {
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT username, goal_weight, phone_number FROM " + TABLE_USERS + " WHERE id=?");
+        try {
+            stmt.bindLong(1, userId);
+            UserProfile profile = null;
+            if (stmt.step()) {
+                String username = stmt.getText(0);
+                double goalWeight = stmt.getDouble(1);
+                String phone = stmt.isNull(2) ? null : stmt.getText(2);
+                profile = new UserProfile(username, goalWeight, phone);
+            }
+            return profile;
+        } finally {
+            stmt.close();
+        }
+    }
 
+    /**
+     * Updates a user's goal weight and phone number.
+     *
+     * <p>If the goal weight changed, the {@code goal_reached_sent}
+     * flag is reset so the SMS can trigger again.</p>
+     *
+     * @return {@code true} if a row was updated
+     */
+    public boolean updateUser(int userId, double goalWeight, String phoneNumber) {
         // Only reset SMS flag when goal weight actually changes
         double currentGoal = getGoalWeight(userId);
 
-        ContentValues values = new ContentValues();
-        values.put("goal_weight", goalWeight);
-        values.put("phone_number", phoneNumber);
-        if (Double.compare(currentGoal, goalWeight) != 0) {
-            values.put("goal_reached_sent", 0);
+        String sql;
+        boolean resetFlag = Double.compare(currentGoal, goalWeight) != 0;
+        if (resetFlag) {
+            sql = "UPDATE " + TABLE_USERS
+                + " SET goal_weight=?, phone_number=?, goal_reached_sent=0 WHERE id=?";
+        } else {
+            sql = "UPDATE " + TABLE_USERS
+                + " SET goal_weight=?, phone_number=? WHERE id=?";
         }
-        int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
-        return rows > 0;
+
+        SQLiteStatement stmt = connection.prepare(sql);
+        try {
+            stmt.bindDouble(1, goalWeight);
+            if (phoneNumber != null) {
+                stmt.bindText(2, phoneNumber);
+            } else {
+                stmt.bindNull(2);
+            }
+            stmt.bindLong(3, userId);
+            stmt.step();
+            return getChanges() > 0;
+        } finally {
+            stmt.close();
+        }
     }
 
     // --- Weight Logic ---
+
+    /**
+     * Inserts a weight entry without notes.
+     *
+     * @return {@code true} if the row was inserted
+     */
     public boolean addWeight(int userId, String date, double weight) {
-        SQLiteDatabase db = getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("userId", userId);
-        values.put("date", date);
-        values.put("weight", weight);
-        return db.insert(TABLE_WEIGHTS, null, values) != -1;
+        return addWeight(userId, date, weight, "");
     }
 
-    public Cursor getWeights(int userId) {
-        SQLiteDatabase db = getReadableDatabase();
-        return db.rawQuery(
-                "SELECT * FROM " + TABLE_WEIGHTS + " WHERE userId=? ORDER BY date DESC",
-                new String[]{String.valueOf(userId)}
-        );
-    }
-
-    public boolean updateWeight(int weightId, String date, double weight) {
-        SQLiteDatabase db = getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("date", date);
-        values.put("weight", weight);
-        int rows = db.update(TABLE_WEIGHTS, values, "id=?", new String[]{String.valueOf(weightId)});
-        return rows > 0;
-    }
-
-    public boolean deleteWeight(int weightId) {
-        SQLiteDatabase db = getWritableDatabase();
-        return db.delete(TABLE_WEIGHTS, "id=?", new String[]{String.valueOf(weightId)}) > 0;
-    }
-
-    public double getGoalWeight(int userId) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT goal_weight FROM users WHERE id=?", new String[]{String.valueOf(userId)});
-        double goalWeight = -1;
-        if (cursor.moveToFirst()) {
-            goalWeight = cursor.getDouble(cursor.getColumnIndexOrThrow("goal_weight"));
+    /**
+     * Inserts a weight entry with optional notes.
+     *
+     * @return {@code true} if the row was inserted
+     */
+    public boolean addWeight(int userId, String date, double weight, String notes) {
+        SQLiteStatement stmt = connection.prepare(
+            "INSERT INTO " + TABLE_WEIGHTS
+                + " (userId, date, weight, notes) VALUES (?, ?, ?, ?)");
+        try {
+            stmt.bindLong(1, userId);
+            stmt.bindText(2, date);
+            stmt.bindDouble(3, weight);
+            stmt.bindText(4, notes != null ? notes : "");
+            stmt.step();
+            return true;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            stmt.close();
         }
-        cursor.close();
-        return goalWeight;
+    }
+
+    /**
+     * Returns all weight entries for a user, newest date first.
+     */
+    public List<WeightEntry> getWeights(int userId) {
+        List<WeightEntry> list = new ArrayList<>();
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT id, date, weight, notes FROM " + TABLE_WEIGHTS
+                + " WHERE userId=? ORDER BY date DESC");
+        try {
+            stmt.bindLong(1, userId);
+            while (stmt.step()) {
+                int id = (int) stmt.getLong(0);
+                String date = stmt.getText(1);
+                double weight = stmt.getDouble(2);
+                String notes = stmt.isNull(3) ? "" : stmt.getText(3);
+                list.add(new WeightEntry(id, date, weight, notes));
+            }
+        } finally {
+            stmt.close();
+        }
+        return list;
+    }
+
+    /**
+     * Returns weight entries between {@code startDate} and
+     * {@code endDate} inclusive, newest first.
+     */
+    public List<WeightEntry> getWeightsInRange(int userId, String startDate, String endDate) {
+        List<WeightEntry> list = new ArrayList<>();
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT id, date, weight, notes FROM " + TABLE_WEIGHTS
+                + " WHERE userId=? AND date BETWEEN ? AND ? ORDER BY date DESC");
+        try {
+            stmt.bindLong(1, userId);
+            stmt.bindText(2, startDate);
+            stmt.bindText(3, endDate);
+            while (stmt.step()) {
+                int id = (int) stmt.getLong(0);
+                String date = stmt.getText(1);
+                double weight = stmt.getDouble(2);
+                String notes = stmt.isNull(3) ? "" : stmt.getText(3);
+                list.add(new WeightEntry(id, date, weight, notes));
+            }
+        } finally {
+            stmt.close();
+        }
+        return list;
+    }
+
+    /**
+     * Full-text search on weight notes using FTS5, with a LIKE
+     * fallback if FTS fails.
+     */
+    public List<WeightEntry> searchWeightNotes(int userId, String query) {
+        List<WeightEntry> list = new ArrayList<>();
+        if (query == null || query.trim().isEmpty()) {
+            return list;
+        }
+
+        SQLiteStatement stmt = null;
+        try {
+            stmt = connection.prepare(
+                "SELECT w.id, w.date, w.weight, w.notes FROM " + TABLE_WEIGHTS + " w "
+                    + "JOIN weights_fts f ON f.rowid = w.id "
+                    + "WHERE f.notes MATCH ? AND w.userId=? ORDER BY w.date DESC");
+            stmt.bindText(1, query);
+            stmt.bindLong(2, userId);
+            while (stmt.step()) {
+                addWeightEntryFromStatement(list, stmt);
+            }
+            return list;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "FTS search failed, falling back to LIKE search", e);
+            return searchWeightNotesFallback(userId, query);
+        } finally {
+            if (stmt != null) {
+                stmt.close();
+            }
+        }
+    }
+
+    private List<WeightEntry> searchWeightNotesFallback(int userId, String query) {
+        List<WeightEntry> list = new ArrayList<>();
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT id, date, weight, notes FROM " + TABLE_WEIGHTS
+                + " WHERE userId=? AND notes LIKE ? ESCAPE '\\' ORDER BY date DESC");
+        try {
+            stmt.bindLong(1, userId);
+            stmt.bindText(2, "%" + escapeLikePattern(query.trim()) + "%");
+            while (stmt.step()) {
+                addWeightEntryFromStatement(list, stmt);
+            }
+        } finally {
+            stmt.close();
+        }
+        return list;
+    }
+
+    private void addWeightEntryFromStatement(List<WeightEntry> list, SQLiteStatement stmt) {
+        int id = (int) stmt.getLong(0);
+        String date = stmt.getText(1);
+        double weight = stmt.getDouble(2);
+        String notes = stmt.isNull(3) ? "" : stmt.getText(3);
+        list.add(new WeightEntry(id, date, weight, notes));
+    }
+
+    private String escapeLikePattern(String value) {
+        return value
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_");
+    }
+
+    /**
+     * Returns weekly averages grouped by ISO week, newest first.
+     */
+    public List<TimePeriodAverage> getWeeklyAverages(int userId) {
+        List<TimePeriodAverage> list = new ArrayList<>();
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT strftime('%Y-W%W', date) AS period, AVG(weight) as average, COUNT(*) as entryCount "
+                + "FROM " + TABLE_WEIGHTS + " WHERE userId=? GROUP BY period ORDER BY period DESC");
+        try {
+            stmt.bindLong(1, userId);
+            while (stmt.step()) {
+                String period = stmt.getText(0);
+                double average = stmt.getDouble(1);
+                int count = (int) stmt.getLong(2);
+                list.add(new TimePeriodAverage(period, average, count));
+            }
+        } finally {
+            stmt.close();
+        }
+        return list;
+    }
+
+    /**
+     * Returns monthly averages grouped by year-month, newest first.
+     */
+    public List<TimePeriodAverage> getMonthlyAverages(int userId) {
+        List<TimePeriodAverage> list = new ArrayList<>();
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT strftime('%Y-%m', date) AS period, AVG(weight) as average, COUNT(*) as entryCount "
+                + "FROM " + TABLE_WEIGHTS + " WHERE userId=? GROUP BY period ORDER BY period DESC");
+        try {
+            stmt.bindLong(1, userId);
+            while (stmt.step()) {
+                String period = stmt.getText(0);
+                double average = stmt.getDouble(1);
+                int count = (int) stmt.getLong(2);
+                list.add(new TimePeriodAverage(period, average, count));
+            }
+        } finally {
+            stmt.close();
+        }
+        return list;
+    }
+
+    /**
+     * Updates the date and weight of an existing entry.
+     *
+     * @return {@code true} if a row was affected
+     */
+    public boolean updateWeight(int weightId, String date, double weight) {
+        SQLiteStatement stmt = connection.prepare(
+            "UPDATE " + TABLE_WEIGHTS + " SET date=?, weight=? WHERE id=?");
+        try {
+            stmt.bindText(1, date);
+            stmt.bindDouble(2, weight);
+            stmt.bindLong(3, weightId);
+            stmt.step();
+            return getChanges() > 0;
+        } finally {
+            stmt.close();
+        }
+    }
+
+    /**
+     * Updates the date, weight, and notes of an existing entry.
+     *
+     * @return {@code true} if a row was affected
+     */
+    public boolean updateWeight(int weightId, String date, double weight, String notes) {
+        SQLiteStatement stmt = connection.prepare(
+            "UPDATE " + TABLE_WEIGHTS + " SET date=?, weight=?, notes=? WHERE id=?");
+        try {
+            stmt.bindText(1, date);
+            stmt.bindDouble(2, weight);
+            stmt.bindText(3, notes != null ? notes : "");
+            stmt.bindLong(4, weightId);
+            stmt.step();
+            return getChanges() > 0;
+        } finally {
+            stmt.close();
+        }
+    }
+
+    /**
+     * Updates only the notes for an existing entry.
+     *
+     * @return {@code true} if a row was affected
+     */
+    public boolean updateWeightNotes(int weightId, String notes) {
+        SQLiteStatement stmt = connection.prepare(
+            "UPDATE " + TABLE_WEIGHTS + " SET notes=? WHERE id=?");
+        try {
+            stmt.bindText(1, notes != null ? notes : "");
+            stmt.bindLong(2, weightId);
+            stmt.step();
+            return getChanges() > 0;
+        } finally {
+            stmt.close();
+        }
+    }
+
+    /**
+     * Bulk-inserts multiple weight rows inside a single transaction.
+     *
+     * @param userId owner user ID
+     * @param rows   list of {@code {date, weight[, notes]}} arrays
+     * @return the number of rows successfully inserted
+     */
+    public int bulkAddWeights(int userId, java.util.List<String[]> rows) {
+        int imported = 0;
+        SQLiteStatement stmt = connection.prepare(
+            "INSERT INTO " + TABLE_WEIGHTS
+                + " (userId, date, weight, notes) VALUES (?, ?, ?, ?)");
+        try {
+            execSQL("BEGIN TRANSACTION");
+            for (String[] row : rows) {
+                // expected: {date, weight, notes}
+                if (row == null || row.length < 2) continue;
+                String date = row[0];
+                double weight;
+                try {
+                    weight = Double.parseDouble(row[1]);
+                } catch (NumberFormatException ex) {
+                    continue;
+                }
+                String notes = row.length > 2 && row[2] != null ? row[2] : "";
+
+                stmt.bindLong(1, userId);
+                stmt.bindText(2, date);
+                stmt.bindDouble(3, weight);
+                stmt.bindText(4, notes);
+                try {
+                    stmt.step();
+                    imported++;
+                } catch (Exception e) {
+                    // skip failed individual inserts
+                }
+                stmt.reset();
+            }
+            execSQL("COMMIT");
+        } catch (Exception e) {
+            try { execSQL("ROLLBACK"); } catch (Exception ignored) {}
+        } finally {
+            stmt.close();
+        }
+        return imported;
+    }
+
+    /**
+     * Deletes a weight entry by row ID.
+     *
+     * @return {@code true} if a row was deleted
+     */
+    public boolean deleteWeight(int weightId) {
+        SQLiteStatement stmt = connection.prepare(
+            "DELETE FROM " + TABLE_WEIGHTS + " WHERE id=?");
+        try {
+            stmt.bindLong(1, weightId);
+            stmt.step();
+            return getChanges() > 0;
+        } finally {
+            stmt.close();
+        }
+    }
+
+    /**
+     * Returns the goal weight for a user, or {@code -1} if the user
+     * does not exist.
+     */
+    public double getGoalWeight(int userId) {
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT goal_weight FROM " + TABLE_USERS + " WHERE id=?");
+        try {
+            stmt.bindLong(1, userId);
+            double goalWeight = -1;
+            if (stmt.step()) {
+                goalWeight = stmt.getDouble(0);
+            }
+            return goalWeight;
+        } finally {
+            stmt.close();
+        }
+    }
+
+    // --- Package-private test helpers ---
+    @VisibleForTesting
+    void deleteUserByUsername(String username) {
+        SQLiteStatement stmt = connection.prepare(
+            "DELETE FROM " + TABLE_USERS + " WHERE username=?");
+        try {
+            stmt.bindText(1, username);
+            stmt.step();
+        } finally {
+            stmt.close();
+        }
+    }
+
+    @VisibleForTesting
+    void deleteWeightsByUserId(int userId) {
+        SQLiteStatement stmt = connection.prepare(
+            "DELETE FROM " + TABLE_WEIGHTS + " WHERE userId=?");
+        try {
+            stmt.bindLong(1, userId);
+            stmt.step();
+        } finally {
+            stmt.close();
+        }
+    }
+
+    @VisibleForTesting
+    void deleteUserById(int userId) {
+        SQLiteStatement stmt = connection.prepare(
+            "DELETE FROM " + TABLE_USERS + " WHERE id=?");
+        try {
+            stmt.bindLong(1, userId);
+            stmt.step();
+        } finally {
+            stmt.close();
+        }
+    }
+
+    @VisibleForTesting
+    String getStoredPasswordHash(String username) {
+        SQLiteStatement stmt = connection.prepare(
+            "SELECT password FROM " + TABLE_USERS + " WHERE username=?");
+        try {
+            stmt.bindText(1, username);
+            if (stmt.step()) {
+                return stmt.isNull(0) ? null : stmt.getText(0);
+            }
+        } finally {
+            stmt.close();
+        }
+        return null;
+    }
+
+    @VisibleForTesting
+    boolean insertRawUser(String username, String rawPassword, double goalWeight) {
+        SQLiteStatement stmt = connection.prepare(
+            "INSERT INTO " + TABLE_USERS
+                + " (username, password, goal_weight) VALUES (?, ?, ?)");
+        try {
+            stmt.bindText(1, username);
+            stmt.bindText(2, rawPassword);
+            stmt.bindDouble(3, goalWeight);
+            stmt.step();
+            return true;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            stmt.close();
+        }
     }
 }
 

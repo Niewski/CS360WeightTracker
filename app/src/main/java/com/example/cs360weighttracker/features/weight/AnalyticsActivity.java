@@ -1,6 +1,5 @@
 package com.example.cs360weighttracker.features.weight;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.Button;
@@ -20,6 +19,14 @@ import com.example.cs360weighttracker.data.WeightRepository;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Dashboard screen displaying computed analytics for the user's
+ * weight history (current weight, rate of change, min/max, streaks,
+ * projected goal date, and 7-day moving averages).
+ *
+ * <p>Delegates computation to {@link AnalyticsViewModel} and
+ * observes the result</p>
+ */
 public class AnalyticsActivity extends AppCompatActivity {
 
     private int userId;
@@ -37,6 +44,10 @@ public class AnalyticsActivity extends AppCompatActivity {
     private TextView tvProjectedGoal;
     private LinearLayout llMovingAverages;
 
+    /**
+     * Wires UI views, initializes the ViewModel, and observes
+     * analytics results.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -76,6 +87,10 @@ public class AnalyticsActivity extends AppCompatActivity {
         viewModel.getAnalyticsResult().observe(this, this::displayAnalytics);
     }
 
+    /**
+     * Populates all analytics fields from the computed result,
+     * handling the "no data" case.
+     */
     private void displayAnalytics(AnalyticsViewModel.AnalyticsResult result) {
         // Goal weight
         tvGoalWeight.setText(String.format(Locale.US, "%.1f lbs", result.goalWeight));
@@ -143,6 +158,10 @@ public class AnalyticsActivity extends AppCompatActivity {
         displayMovingAverages(result.movingAverages, result.entries);
     }
 
+    /**
+     * Renders the most recent 7-day moving average values as a
+     * scrollable list of cards.
+     */
     private void displayMovingAverages(List<Double> movingAverages, List<WeightEntry> entries) {
         float density = getResources().getDisplayMetrics().density;
         llMovingAverages.removeAllViews();
